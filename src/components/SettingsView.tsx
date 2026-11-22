@@ -102,10 +102,10 @@ export function SettingsView() {
 
       <Glass className="card setting">
         <label className="switch-row justify-between">
-          <span className="setting-title">{t.setMemorizeDefault}</span>
-          <Toggle checked={settings.memorize} onCheckedChange={(memorize) => update({ memorize })} aria-label={t.setMemorizeDefault} />
+          <span className="setting-title">{t.fromMemory}</span>
+          <Toggle checked={settings.memorize} onCheckedChange={(memorize) => update({ memorize })} aria-label={t.fromMemory} />
         </label>
-        <p className="text-muted text-sm">{t.memorizeHint}</p>
+        <p className="text-muted text-sm">{t.fromMemoryHint}</p>
       </Glass>
 
       <Glass className="card setting">

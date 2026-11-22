@@ -1,17 +1,22 @@
 import type { Lang } from "../i18n";
 
+/** Arabic text uses Arabic-Indic digits throughout, as the Mushaf does (٦٠٤, ٩٧٪). */
+function locale(lang: Lang): string {
+  return lang === "ar" ? "ar-u-nu-arab" : lang;
+}
+
 /** "67 MB" / "٦٧ ميغابايت" (decimal megabytes, as download sizes are usually shown). */
 export function formatMegabytes(bytes: number, lang: Lang): string {
   const mb = bytes / 1_000_000;
-  return new Intl.NumberFormat(lang, { style: "unit", unit: "megabyte", maximumFractionDigits: mb < 10 ? 1 : 0 }).format(mb);
+  return new Intl.NumberFormat(locale(lang), { style: "unit", unit: "megabyte", maximumFractionDigits: mb < 10 ? 1 : 0 }).format(mb);
 }
 
 export function formatPercent(fraction: number, lang: Lang): string {
-  return new Intl.NumberFormat(lang, { style: "percent", maximumFractionDigits: 0 }).format(fraction);
+  return new Intl.NumberFormat(locale(lang), { style: "percent", maximumFractionDigits: 0 }).format(fraction);
 }
 
 export function formatNumber(n: number, lang: Lang): string {
-  return new Intl.NumberFormat(lang).format(n);
+  return new Intl.NumberFormat(locale(lang)).format(n);
 }
 
 /** Ayah numbers in Arabic-Indic digits, as in the Mushaf. */
@@ -22,8 +27,8 @@ export function ayahNumber(n: number): string {
 export function formatDuration(seconds: number, lang: Lang): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
-  const nf = new Intl.NumberFormat(lang, { minimumIntegerDigits: 2 });
-  return `${new Intl.NumberFormat(lang).format(m)}:${nf.format(s)}`;
+  const nf = new Intl.NumberFormat(locale(lang), { minimumIntegerDigits: 2 });
+  return `${new Intl.NumberFormat(locale(lang)).format(m)}:${nf.format(s)}`;
 }
 
 /** Search key for surah names: no diacritics, unified alef/yeh/teh marbuta, lower-case Latin. */

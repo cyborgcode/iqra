@@ -30,6 +30,7 @@
   ],
   "rewrites": [
     { "source": "/settings", "destination": "/index.html" },
-    { "source": "/about", "destination": "/index.html" }
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/page/:page", "destination": "/index.html" }
   ]
 }

@@ -146,3 +146,47 @@ export const StarMark = ({ size = 28, ...rest }: IconProps) => (
     <circle cx="16" cy="16" r="4.2" fill="var(--mark-core)" />
   </svg>
 );
+
+/** Points to the reading-start side of a left-to-right line; mirror it for the other direction. */
+export const ChevronIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m14.5 5.5-6.5 6.5 6.5 6.5" />
+  </Icon>
+);
+
+export const ListIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 6.5h11M9 12h11M9 17.5h11" />
+    <circle cx="4.75" cy="6.5" r="0.9" fill="currentColor" />
+    <circle cx="4.75" cy="12" r="0.9" fill="currentColor" />
+    <circle cx="4.75" cy="17.5" r="0.9" fill="currentColor" />
+  </Icon>
+);
+
+export const EyeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+
+export const EyeOffIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M10.6 5.6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4M6.5 7.2C3.9 8.9 2.5 12 2.5 12S6 18.5 12 18.5c1.8 0 3.3-.6 4.6-1.4" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M4 4l16 16" />
+  </Icon>
+);
+
+export const SparkIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4M6 6l2.6 2.6M15.4 15.4 18 18M18 6l-2.6 2.6M8.6 15.4 6 18" />
+  </Icon>
+);
+
+export const TargetIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <circle cx="12" cy="12" r="4.5" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" />
+  </Icon>
+);

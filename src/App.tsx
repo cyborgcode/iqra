@@ -1,54 +1,36 @@
-import { useCallback, useEffect, useState } from "react";
 import { AboutView } from "./components/AboutView";
-import { PracticeView } from "./components/PracticeView";
+import { BookView } from "./components/BookView";
 import { SettingsView } from "./components/SettingsView";
-import { Footer, Header, NavBar, type Tab } from "./components/Shell";
+import { Footer, Header, NavBar } from "./components/Shell";
+import { bookRoute, useRoute } from "./state/route";
 import { useSettings } from "./state/settings";
-
-const PATHS: Record<Tab, string> = { practice: "/", settings: "/settings", about: "/about" };
-
-function tabFromPath(path: string): Tab {
-  if (path.startsWith("/settings")) return "settings";
-  if (path.startsWith("/about")) return "about";
-  return "practice";
-}
 
 export default function App() {
   const { t } = useSettings();
-  const [tab, setTab] = useState<Tab>(() => tabFromPath(location.pathname));
-
-  const navigate = useCallback((next: Tab) => {
-    setTab(next);
-    if (location.pathname !== PATHS[next]) history.pushState(null, "", PATHS[next]);
-    window.scrollTo({ top: 0 });
-  }, []);
-
-  useEffect(() => {
-    const onPop = () => setTab(tabFromPath(location.pathname));
-    addEventListener("popstate", onPop);
-    return () => removeEventListener("popstate", onPop);
-  }, []);
+  const route = useRoute();
+  const book = route.view === "book" ? route : bookRoute();
+  const page = book.view === "book" ? book.page : 1;
 
   return (
-    <div className="app">
+    <div className={`app view-${route.view}`}>
       <a href="#main" className="skip-link">
         {t.skipToContent}
       </a>
-      <Header onNavigate={navigate} />
-      {/* Views stay mounted so a recitation in progress survives switching tabs. */}
+      <Header page={route.view === "book" ? page : null} />
+      {/* Views stay mounted so a recitation in progress survives a visit to Settings. */}
       <main id="main" className="app-main" tabIndex={-1}>
-        <div hidden={tab !== "practice"}>
-          <PracticeView />
+        <div hidden={route.view !== "book"}>
+          <BookView page={page} />
         </div>
-        <div hidden={tab !== "settings"}>
+        <div hidden={route.view !== "settings"}>
           <SettingsView />
         </div>
-        <div hidden={tab !== "about"}>
+        <div hidden={route.view !== "about"}>
           <AboutView />
         </div>
       </main>
-      <Footer onNavigate={navigate} />
-      <NavBar tab={tab} onNavigate={navigate} />
+      <Footer />
+      <NavBar view={route.view} />
     </div>
   );
 }

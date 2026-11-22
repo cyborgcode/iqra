@@ -33,6 +33,13 @@
   --warn: #92400e;
   --extra: #7e22ce;
 
+  /* The Mushaf page */
+  --page-bg: #fcf8f0;
+  --page-line: rgb(120 84 40 / 0.22);
+  --page-shadow: 0 1px 2px rgb(60 40 10 / 0.06), 0 12px 36px -12px rgb(60 40 10 / 0.22);
+  --mask: rgb(29 26 22 / 0.1);
+  --live: rgb(67 56 202 / 0.13);
+
   /* glisse */
   --lg-fill: #4f46e5;
   --lg-ring: rgb(67 56 202 / 0.6);
@@ -60,6 +67,12 @@
   --bad: #fca5a5;
   --warn: #fcd34d;
   --extra: #d8b4fe;
+
+  --page-bg: #131a2a;
+  --page-line: rgb(165 180 252 / 0.2);
+  --page-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -14px rgb(0 0 0 / 0.6);
+  --mask: rgb(255 255 255 / 0.11);
+  --live: rgb(165 180 252 / 0.17);
 
   --lg-fill: #5b5bd6;
   --lg-ring: rgb(165 180 252 / 0.7);
@@ -214,29 +227,6 @@ a {
   flex-wrap: wrap;
 }
 
-.step-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.05rem;
-  font-weight: 650;
-}
-.card > .step-title {
-  margin-bottom: 12px;
-}
-
-.step-no {
-  inline-size: 26px;
-  block-size: 26px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
 .page-title {
   font-size: 1.5rem;
   font-weight: 700;
@@ -329,30 +319,6 @@ a {
   font-size: 0.8rem;
   color: var(--muted);
   white-space: nowrap;
-}
-
-.selected-surah {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 12px;
-}
-.selected-surah .surah-ar {
-  font-size: 1.8rem;
-}
-
-/* ---------- Range picker ---------- */
-
-.range-field {
-  display: flex;
-  flex-direction: column;
-  inline-size: 8.5rem;
-}
-.field-label {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-bottom: 6px;
-  padding-inline: 4px;
 }
 
 /* ---------- Quran text ---------- */
@@ -452,22 +418,7 @@ a {
   border-style: dashed;
 }
 
-.hidden-text {
-  margin-block: 8px;
-  padding: 28px 14px;
-  border: 2px dashed var(--track);
-  border-radius: 18px;
-  text-align: center;
-}
-
 /* ---------- Recording ---------- */
-
-.recite-controls {
-  margin-top: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
 
 .model-gate {
   display: flex;
@@ -499,48 +450,6 @@ a {
   border: 2px solid var(--track);
   border-top-color: var(--accent);
   animation: iqra-spin 0.8s linear infinite;
-}
-
-.recording-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-.recording-indicator {
-  flex: 1 1 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.rec-dot {
-  inline-size: 10px;
-  block-size: 10px;
-  border-radius: 50%;
-  background: var(--bad);
-  animation: iqra-pulse 1.2s ease-in-out infinite;
-}
-
-.level {
-  flex: 1;
-  max-inline-size: 14rem;
-  block-size: 6px;
-  border-radius: 999px;
-  background: var(--track);
-  overflow: hidden;
-}
-.level-fill {
-  display: block;
-  block-size: 100%;
-  inline-size: 100%;
-  background: var(--ok);
-  transform-origin: left center;
-  transition: transform 0.08s linear;
-}
-[dir="rtl"] .level-fill {
-  transform-origin: right center;
 }
 
 .switch-row {
@@ -641,61 +550,6 @@ a {
   font-weight: 600;
 }
 
-.details {
-  display: grid;
-  gap: 4px;
-}
-.detail-link {
-  inline-size: 100%;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  padding: 8px 10px;
-  border-radius: 14px;
-  text-align: start;
-}
-button.detail-link {
-  cursor: pointer;
-}
-button.detail-link:hover {
-  background: var(--hover);
-}
-.detail-wrong {
-  color: var(--bad);
-}
-.detail-missed {
-  color: var(--warn);
-}
-.detail-extra {
-  color: var(--extra);
-}
-.detail-ayah {
-  min-inline-size: 1.8em;
-  padding: 0 0.4em;
-  border-radius: 999px;
-  border: 1.5px solid currentColor;
-  font-size: 0.8rem;
-  text-align: center;
-}
-.detail-word,
-.detail-heard {
-  font-family: var(--font-quran);
-  font-size: 1.35rem;
-  line-height: 1.6;
-  color: var(--fg);
-}
-.detail-what {
-  color: var(--muted);
-  font-size: 0.9rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-[dir="rtl"] .flip-rtl {
-  transform: scaleX(-1);
-}
-
 .transcript {
   margin-top: 14px;
   padding-top: 12px;
@@ -762,6 +616,627 @@ button.detail-link:hover {
   padding-inline-start: 1.25rem;
 }
 
+
+/* ---------- Header: where you are in the Mushaf ---------- */
+
+.page-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 55%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--soft);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.page-info:hover {
+  background: var(--hover);
+}
+.page-info-surah {
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page-info-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .page-info-meta {
+    display: none;
+  }
+}
+
+/* ---------- The book ---------- */
+
+.view-book .app-footer {
+  padding-bottom: calc(230px + env(safe-area-inset-bottom));
+}
+
+.book {
+  padding-bottom: 12px;
+}
+
+.page-stage {
+  touch-action: pan-y;
+  transition: transform 0.25s ease-out;
+}
+
+.page-turn.turn-next {
+  animation: iqra-turn-next 0.32s ease-out;
+}
+.page-turn.turn-prev {
+  animation: iqra-turn-prev 0.32s ease-out;
+}
+@keyframes iqra-turn-next {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@keyframes iqra-turn-prev {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+.mushaf-page {
+  position: relative;
+  padding: 14px 16px 12px;
+  border-radius: 22px;
+  background: var(--page-bg);
+  box-shadow: var(--page-shadow);
+  outline: 1px solid var(--page-line);
+  outline-offset: -7px;
+}
+@media (min-width: 640px) {
+  .mushaf-page {
+    padding: 20px 32px 16px;
+  }
+}
+
+.page-head,
+.page-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding-inline: 4px;
+}
+.page-head {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--page-line);
+}
+.page-head-surah {
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page-head-juz {
+  flex: none;
+  white-space: nowrap;
+}
+.page-foot {
+  justify-content: center;
+  padding-top: 6px;
+  border-top: 1px solid var(--page-line);
+}
+.page-number {
+  font-family: var(--font-quran);
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+
+.page-loading {
+  display: grid;
+  place-items: center;
+  min-block-size: 50vh;
+}
+
+.page-text {
+  padding-block: 6px;
+  line-height: 2.35;
+}
+
+.surah-heading {
+  display: block;
+  margin-block: 0.5em 0.15em;
+  text-align: center;
+  text-align-last: center;
+  line-height: 1.6;
+}
+.surah-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.3em 1em 0.35em;
+  border: 1.5px solid var(--accent-line);
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, var(--accent-soft), transparent 30%, transparent 70%, var(--accent-soft)),
+    var(--page-bg);
+}
+.surah-frame::before,
+.surah-frame::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  inline-size: 0.55em;
+  block-size: 0.55em;
+  border: 1.5px solid var(--accent-line);
+  background: var(--page-bg);
+  transform: translateY(-50%) rotate(45deg);
+}
+.surah-frame::before {
+  inset-inline-start: -0.32em;
+}
+.surah-frame::after {
+  inset-inline-end: -0.32em;
+}
+.surah-frame-name {
+  font-size: 0.95em;
+  color: var(--accent);
+}
+.surah-frame-en {
+  font-family: var(--font-sans);
+  font-size: 0.38em;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.basmala {
+  display: block;
+  margin-top: 0.25em;
+}
+
+.ayah {
+  border-radius: 10px;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ayah-selected {
+  background: var(--accent-soft);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.ayah-flash {
+  animation: iqra-flash 1.6s ease-out;
+}
+@keyframes iqra-flash {
+  0%,
+  35% {
+    background: color-mix(in srgb, var(--brand-b) 22%, transparent);
+  }
+}
+
+.ayah-end {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 1.7em;
+  block-size: 1.7em;
+  padding-inline: 0.28em;
+  margin-inline: 0.1em;
+  border-radius: 999px;
+  border: 1.5px solid var(--accent-line);
+  box-shadow: inset 0 0 0 2px var(--page-bg), inset 0 0 0 3px var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-quran);
+  font-size: 0.6em;
+  line-height: 1;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.ayah-end:hover,
+.ayah-end[aria-pressed="true"] {
+  background: var(--accent-soft);
+}
+
+/* Words being recited right now (provisional), and the next word expected. */
+.w-live {
+  color: var(--accent);
+  background-image: linear-gradient(var(--live), var(--live));
+  background-repeat: no-repeat;
+  background-size: 100% 0.5em;
+  background-position: 0 88%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: color 0.2s;
+}
+.w-next {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 3px;
+  text-decoration-color: var(--accent);
+  animation: iqra-next 1.4s ease-in-out infinite;
+}
+@keyframes iqra-next {
+  50% {
+    text-decoration-color: transparent;
+  }
+}
+
+/* "Recite from memory": a hidden word keeps its place as a soft slab. */
+.w-masked {
+  color: transparent;
+  background-image: linear-gradient(var(--mask), var(--mask));
+  background-repeat: no-repeat;
+  background-size: calc(100% - 0.12em) 0.62em;
+  background-position: center 62%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.w-masked .w-badge {
+  visibility: hidden;
+}
+.w-hint {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--brand-b);
+}
+
+/* ---------- Dock ---------- */
+
+.dock-wrap {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(max(env(safe-area-inset-bottom), 14px) + 74px);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 12px;
+  pointer-events: none;
+}
+.app:has(.tabbar-wrap) .dock-wrap {
+  bottom: calc(max(env(safe-area-inset-bottom), 14px) + 74px);
+}
+.app:not(:has(.tabbar-wrap)) .dock-wrap {
+  bottom: max(env(safe-area-inset-bottom), 14px);
+}
+.view-settings .dock-wrap,
+.view-about .dock-wrap {
+  display: none;
+}
+.dock-wrap > * {
+  pointer-events: auto;
+}
+
+.dock {
+  inline-size: min(100%, 30rem);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border-radius: 28px;
+}
+.dock-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-block-size: 1.5em;
+  padding-inline: 6px;
+  font-size: 0.86rem;
+  text-align: center;
+  color: var(--muted);
+}
+.dock-error {
+  color: var(--bad);
+  font-weight: 500;
+}
+.dock-dismiss {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.dock-dismiss:hover {
+  background: var(--hover);
+}
+.dock-time {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  color: var(--bad);
+  font-weight: 600;
+}
+.dock-note {
+  font-size: 0.78rem;
+  text-align: center;
+  color: var(--muted);
+}
+.dock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.dock-row .is-on {
+  color: var(--brand-b);
+}
+.mirror {
+  transform: scaleX(-1);
+}
+
+.mic {
+  --level: 0;
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 64px;
+  block-size: 64px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(145deg, var(--brand-a), color-mix(in srgb, var(--brand-a) 55%, var(--brand-b)));
+  box-shadow:
+    0 6px 18px -6px color-mix(in srgb, var(--brand-a) 70%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.35);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.1s linear,
+    background 0.2s;
+}
+.mic:hover:not(:disabled) {
+  transform: scale(1.04);
+}
+.mic:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.mic:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+.mic-on {
+  background: linear-gradient(145deg, #dc2626, #b91c1c);
+  box-shadow:
+    0 0 0 calc(3px + var(--level) * 14px) rgb(220 38 38 / 0.22),
+    0 6px 18px -6px rgb(185 28 28 / 0.7);
+}
+.mic-progress {
+  box-shadow:
+    0 0 0 3px var(--page-bg),
+    0 0 0 6px var(--track);
+  background:
+    linear-gradient(145deg, var(--brand-a), color-mix(in srgb, var(--brand-a) 55%, var(--brand-b))) padding-box,
+    conic-gradient(var(--brand-b) calc(var(--progress) * 1turn), var(--track) 0) border-box;
+  border: 5px solid transparent;
+}
+.mic-spinner {
+  inline-size: 24px;
+  block-size: 24px;
+  border-color: rgb(255 255 255 / 0.35);
+  border-top-color: #fff;
+}
+
+.ayah-bar {
+  inline-size: min(100%, 30rem);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 24px;
+}
+[dir="rtl"] .ayah-bar {
+  padding: 8px 14px 8px 8px;
+}
+.ayah-bar-label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Sheets ---------- */
+
+.sheet {
+  margin: auto auto 0;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  max-block-size: 90dvh;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+.sheet::backdrop {
+  background: rgb(10 12 20 / 0.45);
+  backdrop-filter: blur(2px);
+}
+.sheet[open] {
+  animation: iqra-sheet 0.28s ease-out;
+}
+@keyframes iqra-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+.sheet-panel {
+  display: flex;
+  flex-direction: column;
+  max-block-size: 90dvh;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+}
+@media (min-width: 640px) {
+  .sheet {
+    margin: auto;
+    max-inline-size: 36rem;
+    max-block-size: 86dvh;
+  }
+  .sheet-panel {
+    max-block-size: 86dvh;
+    padding: 18px 22px 20px;
+    border-radius: 28px;
+  }
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+}
+.sheet-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.sheet-body {
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-inline: -6px;
+  padding: 2px 6px 4px;
+}
+.index-body {
+  margin-top: 14px;
+}
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 8px;
+}
+.tile {
+  inline-size: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--soft);
+  text-align: start;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.tile:hover {
+  background: var(--hover);
+}
+.tile-title {
+  font-weight: 650;
+}
+.tile-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.hizb-list {
+  display: grid;
+  gap: 4px;
+}
+.hizb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 4px 6px 10px;
+  border-radius: 14px;
+}
+.hizb-row:nth-child(odd) {
+  background: var(--soft);
+}
+.hizb-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hizb-quarters {
+  display: flex;
+  gap: 4px;
+}
+.quarter {
+  inline-size: 40px;
+  block-size: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1.5px solid var(--accent-line);
+  color: var(--accent);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.quarter:hover {
+  background: var(--accent-soft);
+}
+
+.goto-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.goto-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.goto-row > :first-child {
+  flex: 1;
+}
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding-inline: 4px;
+}
+
+.review-list {
+  display: grid;
+  gap: 4px;
+}
+.review-row {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: var(--soft);
+  text-align: start;
+  cursor: pointer;
+}
+.review-row:hover {
+  background: var(--hover);
+}
+.review-ayah {
+  font-weight: 600;
+}
+.review-counts {
+  display: inline-flex;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+.review-counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.review-show {
+  margin-inline-start: auto;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
 /* ---------- Motion ---------- */
 
 @keyframes iqra-spin {
@@ -769,21 +1244,21 @@ button.detail-link:hover {
     transform: rotate(360deg);
   }
 }
-@keyframes iqra-pulse {
-  50% {
-    opacity: 0.35;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation-duration: 2.4s;
   }
-  .rec-dot {
+  .page-turn.turn-next,
+  .page-turn.turn-prev,
+  .sheet[open],
+  .ayah-flash,
+  .w-next {
     animation: none;
   }
   .score-fill,
   .progress-fill,
-  .level-fill {
+  .page-stage,
+  .mic {
     transition: none;
   }
 }
