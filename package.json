@@ -1,0 +1,46 @@
+{
+  "name": "iqra",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Free, non-commercial Quran recitation practice. Speech recognition runs entirely in the browser.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "data": "node scripts/build-quran-data.mjs",
+    "licenses": "node scripts/build-licenses.mjs"
+  },
+  "dependencies": {
+    "@fontsource/amiri-quran": "^5.3.0",
+    "@huggingface/transformers": "^4.3.2",
+    "glisse": "^0.6.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.8",
+    "globals": "^17.14.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  }
+}

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+.vercel/
+coverage/
+
+# ONNX Runtime WebAssembly files are copied from node_modules at build time
+public/ort/
+
+# local-only test material (recordings are never committed)
+.local/
+*.wav
+*.mp3
+
+.DS_Store
+*.log
