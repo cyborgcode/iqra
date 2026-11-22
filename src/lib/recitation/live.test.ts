@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LiveTranscriber } from "./live";
 import { segmentByPauses } from "../audio/segment";
 
@@ -70,5 +70,87 @@ describe("LiveTranscriber", () => {
     const silence = new Float32Array(SR * 5);
     t.update(silence);
     expect(await t.finish(silence)).toEqual([]);
+  });
+});
+
+describe("LiveTranscriber: partial transcripts", () => {
+  /** A model that takes `delay` ms per request and reports what it was asked. */
+  function slowModel(delay: number) {
+    const calls: { seconds: number; at: number }[] = [];
+    let now = 0;
+    return {
+      calls,
+      tick: (t: number) => (now = t),
+      transcribe: (segment: Float32Array) =>
+        new Promise<string>((resolve) => {
+          calls.push({ seconds: segment.length / SR, at: now });
+          setTimeout(() => resolve(`${(segment.length / SR).toFixed(1)}s`), delay);
+        }),
+    };
+  }
+
+  it("transcribes the phrase still being recited while the model is idle, and finished phrases first", async () => {
+    vi.useFakeTimers();
+    try {
+      const { audio } = recitation();
+      const model = slowModel(300);
+      const finals: number[] = [];
+      const partials: number[] = [];
+      const log: string[] = [];
+      const live = new LiveTranscriber(model.transcribe, {
+        onFinal: (i) => (finals.push(i), log.push(`F${i}`)),
+        onPartial: (i) => (partials.push(i), log.push(`P${i}`)),
+      });
+      for (let n = SR / 2; n < audio.length; n += SR / 2) {
+        model.tick(n / SR);
+        live.update(audio.subarray(0, n));
+        await vi.advanceTimersByTimeAsync(500);
+      }
+      const done = live.finish(audio);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(await done).toHaveLength(7);
+      expect(finals).toEqual([0, 1, 2, 3, 4, 5, 6]);
+      // Every ayah got provisional transcripts while it was being recited…
+      expect(new Set(partials)).toEqual(new Set([0, 1, 2, 3, 4, 5, 6]));
+      // …and none arrives after the ayah is final.
+      for (const i of finals) expect(log.lastIndexOf(`P${i}`)).toBeLessThan(log.indexOf(`F${i}`));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never sends a partial while a finished segment is waiting for the model", async () => {
+    vi.useFakeTimers();
+    try {
+      const { audio } = recitation();
+      let inFlight = 0;
+      let partialWhileBusy = false;
+      const live = new LiveTranscriber(
+        (segment) => {
+          inFlight++;
+          return new Promise((resolve) =>
+            setTimeout(() => {
+              inFlight--;
+              resolve(String(segment.length));
+            }, 2500),
+          );
+        },
+        {
+          onPartial: () => {
+            if (inFlight > 0) partialWhileBusy = true;
+          },
+        },
+      );
+      for (let n = SR / 2; n < audio.length; n += SR / 2) {
+        live.update(audio.subarray(0, n));
+        await vi.advanceTimersByTimeAsync(500);
+      }
+      const done = live.finish(audio);
+      await vi.advanceTimersByTimeAsync(30000);
+      await done;
+      expect(partialWhileBusy).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
