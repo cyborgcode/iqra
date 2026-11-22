@@ -1,8 +1,17 @@
 # iqra · اقرأ
 
-A free, non-commercial web app for practicing Quran recitation. Pick a surah and a range of ayahs, recite into the
-microphone, and see which words you recited as written, missed, said differently, or added.
+A free, non-commercial web app for practicing Quran recitation. It opens as a Mushaf: turn to any page, or none in
+particular, press the microphone and recite. iqra finds where you are in the whole Quran, turns to that page,
+follows you word by word as you recite, and marks which words you recited as written, missed, said differently, or
+added.
 
+- **The whole book.** All 604 pages of the Madani Mushaf, with surah headings, juz and hizb divisions from Tanzil's
+  metadata. Contents by surah, juz, hizb quarter, page number or `surah:ayah`; swipe, arrow keys or buttons to turn
+  pages.
+- **Start anywhere, follow along.** The first words you recite are looked up in all 77,433 words of the Quran. From
+  then on the book follows you, turning pages as you go, with words lighting up while you recite them.
+- **Recite from memory.** Hide the words; each one appears as you recite it. Press and hold an ayah to peek, or ask
+  for the next word.
 - **Private by design.** Speech recognition runs entirely in your browser (a Web Worker running Whisper through
   ONNX Runtime). Audio never leaves the device. There is no backend, no accounts, no analytics, no ads.
 - **Costs nothing to run.** A static site on Vercel's free Hobby plan. The only network traffic is loading the site
@@ -67,25 +76,29 @@ Open http://localhost:5173. Recording needs a secure context, which `localhost` 
   requests may go only to the site and to Hugging Face (`connect-src`).
 - **Caching.** Hashed assets and the versioned speech engine are cached for a year, the per-surah text files for a
   day.
-- **Routes.** `/settings` and `/about` are served by the single-page app.
+- **Routes.** `/page/1` … `/page/604`, `/settings` and `/about` are served by the single-page app.
 
 The deployment is about 43 MB, mostly the ONNX Runtime WebAssembly engine (served by the site instead of a
 third-party CDN). It is only downloaded when the speech model is first prepared.
 
 ## How it works
 
-1. **Choose a surah and ayahs.** Only the selected surah's text is loaded (one small JSON file per surah).
+1. **Open the Mushaf.** Each page shows its ayahs (page boundaries from Tanzil's metadata), loaded from one small
+   JSON file per surah. In the background the remaining surah files are fetched and indexed for searching.
 2. **Record.** `getUserMedia` feeds an AudioWorklet that resamples to 16 kHz mono Float32 as it records, after two
    low-pass filters to prevent aliasing. Denied permission, a missing or busy microphone and unsupported browsers
    get clear messages.
 3. **Split at pauses.** Whisper hears at most 30 s at a time, and these Quran models were trained on one ayah per
    clip. The recording is cut at every pause of at least 0.35 s, so each segment is about one ayah or phrase;
-   segments longer than 24 s (a long ayah with no pause) are cut at their quietest point. Finished segments are
-   transcribed in the background while you are still reciting, so results appear a few seconds after you stop.
-4. **Transcribe.** A Web Worker runs the model with Transformers.js: the encoder on WebGPU when the device has a real
-   GPU adapter, everything else on multithreaded WebAssembly. Settings offers a WebAssembly-only mode.
-5. **Compare.** The transcript is aligned with the expected words and every word is marked correct, different
-   (wrong), or missed, plus any added words.
+   segments longer than 24 s (a long ayah with no pause) are cut at their quietest point.
+4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: the encoder on WebGPU when the device
+   has a real GPU adapter, everything else on multithreaded WebAssembly. Each finished segment is transcribed as
+   soon as you start the next one. While the model has nothing finished to do, it also transcribes the phrase you
+   are still reciting, about every second or two, so the words you are saying light up provisionally. Finished
+   segments always go first.
+5. **Find and follow.** Each finished segment is placed in the Quran (below) and its words are marked correct,
+   different (wrong) or missed, plus any added words. Marks stay on the book until you clear them; the summary
+   lists the ayahs to look at again and can start you on them.
 
 ### Why cut at every pause (and not fixed 30 s windows, or ayah by ayah)
 
@@ -161,6 +174,41 @@ The remaining "different" words are genuine recognition errors (e.g. `رَانَ
 normalization rules, 90.3 % of word pairs matched exactly; with the full rules, 98.4 %. That matters when the
 slider is raised: at θ = 0.85 the basic rules would wrongly flag 169 correct words, the full rules 34.
 
+### Finding and following a recitation
+
+[`src/lib/recitation/locate.ts`](src/lib/recitation/locate.ts) and
+[`src/lib/recitation/tracker.ts`](src/lib/recitation/tracker.ts), tested in the files next to them.
+
+**Finding the first words anywhere.** Every word of the Quran gets a *skeleton*: its comparison key without alefs
+and optional letters, the letters that Uthmani and standard spelling most often write differently. Runs of
+$n = 1, 2, 3$ heard skeletons are looked up in an index of all 77,433 words; every hit votes for the offset
+$\delta = p - i$ (word $p$ of the Quran lined up with heard word $i$), weighted by how rare the run is:
+
+$$w = n \cdot \ln\!\left(1 + \frac{N}{\mathrm{postings}}\right), \qquad N = 77{,}433$$
+
+Votes for offsets on an ayah's first word count 1.5 times (segments are cut at pauses, so they usually start an
+ayah), nearby offsets are pooled (a missed or repeated word shifts them), and two heard words that Uthmani writes as
+one (`يا أيها` ~ `يَـٰٓأَيُّهَا`) or a dropped `و`/`ف` also vote. The best eight offsets and the open page are then checked
+with the word alignment below, and ranked by words matched, then the open page, then closeness of spelling, then a
+span of whole ayahs. All 591 real transcripts in the tests are placed at their ayah or, for 15 of them, at an ayah
+with identical words (the refrain of Al-Mursalat, 77:15 = 83:10, among others), in about 1.5 ms each. When words
+occur in several places equally well and none is on the open page, iqra waits for the next ayah to decide.
+
+**Following.** Once found, each segment is aligned *locally* around where the reciter is: the expected words from
+the start of the previous ayah to two ayahs ahead. In local alignment the expected words before and after the
+matched span cost nothing, and the span must start and end on a word close to the text. Then:
+
+- words between where you were and where the segment starts were skipped, and are marked missed;
+- a segment that starts earlier is a repetition: its words take the latest attempt, nothing is marked missed;
+- a segment that fits nowhere nearby is looked up in the whole Quran again, which follows a jump to another page
+  or surah without marking anything in between;
+- the isti'ādha, the basmala (between surahs, or before starting mid-surah), *ṣadaqa-llāh* and *āmīn* are
+  recognized and never reported as added words, unless they are the text itself (Al-Fatiha 1:1, 27:30, 16:98);
+- when you stop one or two words before the end of an ayah, those words are marked missed.
+
+On the real transcripts, An-Naba 1–40, ʿAbasa, Al-Fajr, Al-ʿĀdiyāt, Al-Ikhlāṣ and Al-Baqarah 1–12 are each found
+from their first ayah and followed to the end with no word wrongly marked missed.
+
 ## Speech models and how they were converted
 
 The app uses ONNX builds of [tarteel-ai/whisper-tiny-ar-quran](https://huggingface.co/tarteel-ai/whisper-tiny-ar-quran)
@@ -216,8 +264,9 @@ encoder. To use other repositories, change `repo`, `revision` and the file sizes
 ## Quran text
 
 [`data/tanzil/`](data/tanzil) holds Tanzil's files exactly as downloaded (with their copyright notice).
-`npm run data` turns them into `public/quran/001.json` … `114.json` (each carrying the full notice) and
-`src/data/surahs.ts` (Arabic names, English transliterations, ayah counts). The XML export is used because Tanzil's
+`npm run data` turns them into `public/quran/001.json` … `114.json` (each carrying the full notice),
+`src/data/surahs.ts` (Arabic names, English transliterations, ayah counts) and `src/data/book.ts` (where each of the
+604 pages, 30 juz and 240 hizb quarters starts, and the 15 ayahs of prostration). The XML export is used because Tanzil's
 text export prefixes ayah 1 of most surahs with the basmala; the basmala is shown above those surahs instead.
 Tests check that every one of the 6,236 ayahs is byte-identical to Tanzil's XML and agrees with its independent text
 export, and that splitting ayahs into words for display never changes a character.
@@ -230,11 +279,14 @@ model-cards/             model cards of the ONNX builds on the Hub
 public/quran/            generated per-surah text (verbatim, with Tanzil's notice)
 public/licenses/         license texts shown from the About page
 scripts/                 data, license and model-conversion scripts
+src/data/                generated surah metadata and Mushaf divisions
 src/lib/arabic/          normalization and word similarity
-src/lib/recitation/      alignment, evaluation, optional phrases, live transcription
+src/lib/quran/           pages, juz and hizb; the whole text as one word sequence; ayah references
+src/lib/recitation/      alignment, locating, following, optional phrases, live transcription
 src/lib/audio/           recorder (AudioWorklet), pause segmentation
 src/lib/asr/             page-side client for the speech worker
 src/worker/              the speech-recognition Web Worker
+src/state/               settings, the current page, the recitation in progress
 src/components/          React UI (glisse components)
 ```
 
@@ -250,6 +302,11 @@ so in Arabic they are rendered in left-to-right islands with their items in righ
   are where recognition noise and real mistakes overlap; raise the strictness to catch more of them.
 - If a reciter goes more than 24 s without any pause, that stretch is cut at its quietest point, which can split a
   word.
+- Following updates about every second or two, not with every syllable: the model needs that long to transcribe.
+- An ayah whose words also occur elsewhere (refrains such as 55:13) is placed on the open page, or near where you
+  were reciting; recited on its own from another page, it is placed at the first ayah with those words.
+- Marks are kept in memory until the page is reloaded, and only the page you last opened is remembered (in
+  `localStorage`). Nothing is saved anywhere else.
 
 ## Attributions and licenses
 
