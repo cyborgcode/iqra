@@ -4,7 +4,7 @@
  */
 
 export interface OptionalPhrase {
-  id: "istiadha" | "basmala" | "sadaqa";
+  id: "istiadha" | "basmala" | "sadaqa" | "amin";
   text: string;
 }
 
@@ -16,6 +16,9 @@ export const BASMALA: OptionalPhrase = { id: "basmala", text: "بِسْمِ ٱل
 
 /** صدق الله العظيم — sometimes said at the end. */
 export const SADAQA: OptionalPhrase = { id: "sadaqa", text: "صَدَقَ اللَّهُ الْعَظِيمُ" };
+
+/** آمين — said after Al-Fatiha. */
+export const AMIN: OptionalPhrase = { id: "amin", text: "آمِينَ" };
 
 /**
  * Optional phrases for a recitation of `surah` starting at ayah `fromAyah`.
