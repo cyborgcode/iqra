@@ -76,6 +76,22 @@ export function readMetadata(xml = readFileSync(path.join(TANZIL_DIR, "quran-dat
   };
 }
 
+/** Book divisions from quran-data.xml: Madani pages, juz, hizb quarters and sajdas, as [sura, aya] starts. */
+export function readDivisions(xml = readFileSync(path.join(TANZIL_DIR, "quran-data.xml"), "utf8")) {
+  const section = (tag) => {
+    const m = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+    if (!m) throw new Error(`quran-data.xml has no <${tag}>`);
+    return [...m[1].matchAll(/<\w+\s([^>]*?)\/>/g)].map(([, tag2]) => attributes(tag2));
+  };
+  const starts = (tag) => section(tag).map((a) => [Number(a.sura), Number(a.aya)]);
+  return {
+    pages: starts("pages"),
+    juzs: starts("juzs"),
+    hizbQuarters: starts("hizbs"),
+    sajdas: section("sajdas").map((a) => [Number(a.sura), Number(a.aya), a.type]),
+  };
+}
+
 /** The "txt-2" export (sura|aya|text), used only to cross-check the XML. */
 export function readQuranTxt(txt = readFileSync(path.join(TANZIL_DIR, "quran-uthmani.txt"), "utf8")) {
   const map = new Map();
