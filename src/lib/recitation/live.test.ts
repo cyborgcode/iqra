@@ -27,7 +27,7 @@ function recitation(): { audio: Float32Array; ayahs: [number, number][] } {
 }
 
 describe("LiveTranscriber", () => {
-  it("sends finished ayahs while recording and the rest at the end, in order", async () => {
+  it("sends each ayah as soon as the reciter pauses after it, and in order", async () => {
     const { audio, ayahs } = recitation();
     const sentAt: number[] = [];
     const lengths: number[] = [];
@@ -37,18 +37,43 @@ describe("LiveTranscriber", () => {
       lengths.push(segment.length / SR);
       return `part${lengths.length}`;
     });
-    // feed the recording one second at a time, as the app does
-    for (recorded = SR; recorded < audio.length; recorded += SR) live.update(audio.subarray(0, recorded));
+    // Feed the recording a quarter of a second at a time, as the app does.
+    const step = SR / 4;
+    for (recorded = step; recorded < audio.length; recorded += step) live.update(audio.subarray(0, recorded));
     const beforeStop = live.sent;
     recorded = audio.length;
     const progress: [number, number][] = [];
     const texts = await live.finish(audio, (done, total) => progress.push([done, total]));
 
     expect(texts).toEqual(["part1", "part2", "part3", "part4", "part5", "part6", "part7"]);
-    expect(beforeStop).toBe(6); // all but the last ayah were already being transcribed
-    // each ayah was sent within ~2 s of the reciter starting the next one
-    sentAt.slice(0, 6).forEach((t, i) => expect(t).toBeLessThanOrEqual(ayahs[i + 1]![0] + 2));
+    expect(beforeStop).toBe(7); // the last ayah too: the reciter paused after it before stopping
+    // Each ayah was sent at the first look after a 0.35 s pause, before the next ayah began.
+    sentAt.forEach((t, i) => {
+      expect(t).toBeLessThanOrEqual(ayahs[i]![1] + 0.35 + 0.25 + 0.05);
+      if (i < 6) expect(t).toBeLessThan(ayahs[i + 1]![0]);
+    });
     expect(progress.at(-1)).toEqual([7, 7]);
+  });
+
+  it("waits for a longer pause before sending a phrase too short to stand alone", () => {
+    // Two 0.6 s words with 0.5 s between them, then a 1.5 s pause; faint noise in the pauses.
+    const audio = new Float32Array(Math.round(4.4 * SR));
+    let seed = 3;
+    for (let i = 0; i < audio.length; i++) audio[i] = ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 0.002;
+    for (const [a, b] of [[0.5, 1.1], [1.6, 2.2]] as const) {
+      for (let i = Math.round(a * SR); i < Math.round(b * SR); i++) audio[i] = 0.3 * Math.sin((2 * Math.PI * 200 * i) / SR);
+    }
+    const sent: number[] = [];
+    const live = new LiveTranscriber(async (segment) => {
+      sent.push(segment.length / SR);
+      return "";
+    });
+    const at = (seconds: number) => live.update(audio.subarray(0, Math.round(seconds * SR)));
+    at(1.5); // 0.4 s after the first word: too short to stand alone yet
+    expect(sent).toEqual([]);
+    at(2.7); // 0.5 s after the second word: the two words, as one phrase
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toBeGreaterThan(1.6);
   });
 
   it("produces the same segments as segmenting the whole recording at once", async () => {
@@ -62,7 +87,8 @@ describe("LiveTranscriber", () => {
     await t.finish(audio);
     const whole = segmentByPauses(audio).segments.map((s) => Math.round((s.end - s.start) / 1600));
     expect(live).toHaveLength(whole.length);
-    live.forEach((len, i) => expect(Math.abs(len - whole[i]!)).toBeLessThanOrEqual(3)); // within 0.3 s
+    // Within half a second: live, a phrase ends 0.2 s after the voice; whole, in the middle of the pause.
+    live.forEach((len, i) => expect(Math.abs(len - whole[i]!)).toBeLessThanOrEqual(5));
   });
 
   it("returns nothing for a silent recording", async () => {

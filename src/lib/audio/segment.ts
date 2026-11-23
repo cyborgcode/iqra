@@ -36,6 +36,8 @@ export interface Segmentation {
   segments: Segment[];
   /** False when the recording contains no speech at all (silence or a muted microphone). */
   hasSpeech: boolean;
+  /** Seconds of silence at the end, after the last speech (all of it when there is none). */
+  trailingSilence: number;
 }
 
 const FRAME_SECONDS = 0.02;
@@ -93,10 +95,13 @@ export function segmentByPauses(samples: Float32Array, options: SegmentOptions =
 
   const db = frameLevels(samples, frame);
   const n = db.length;
-  if (n === 0) return { segments: [], hasSpeech: false };
+  if (n === 0) return { segments: [], hasSpeech: false, trailingSilence: 0 };
   const threshold = options.threshold !== undefined ? options.threshold : levelThreshold(db);
-  if (threshold === null) return { segments: [], hasSpeech: false };
+  if (threshold === null) return { segments: [], hasSpeech: false, trailingSilence: n * FRAME_SECONDS };
   const silent = Array.from(db, (v) => v < threshold);
+  let lastSpeech = n - 1;
+  while (lastSpeech >= 0 && silent[lastSpeech]) lastSpeech--;
+  const trailingSilence = (n - 1 - lastSpeech) * FRAME_SECONDS;
 
   // Speech runs, split wherever a silence lasts at least minPause.
   const runs: [number, number][] = [];
@@ -118,7 +123,7 @@ export function segmentByPauses(samples: Float32Array, options: SegmentOptions =
     runs.push([f, end]);
     f = g;
   }
-  if (runs.length === 0) return { segments: [], hasSpeech: false };
+  if (runs.length === 0) return { segments: [], hasSpeech: false, trailingSilence };
 
   // Pieces start and end in the middle of the pauses around them (or with padding at the edges).
   let pieces: [number, number][] = runs.map(([a, b], i) => [
@@ -163,5 +168,5 @@ export function segmentByPauses(samples: Float32Array, options: SegmentOptions =
       return speech >= minSpeechFrames;
     })
     .map(([a, b]) => ({ start: a * frame, end: Math.min(samples.length, b * frame) }));
-  return { segments, hasSpeech: segments.length > 0 };
+  return { segments, hasSpeech: segments.length > 0, trailingSilence };
 }

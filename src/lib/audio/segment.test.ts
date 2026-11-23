@@ -80,9 +80,15 @@ describe("segmentByPauses", () => {
   });
 
   it("reports silence (or a muted microphone) as no speech", () => {
-    expect(segmentByPauses(signal([[5, "pause"]]))).toEqual({ segments: [], hasSpeech: false });
-    expect(segmentByPauses(new Float32Array(SR * 3))).toEqual({ segments: [], hasSpeech: false });
-    expect(segmentByPauses(new Float32Array(0))).toEqual({ segments: [], hasSpeech: false });
+    expect(segmentByPauses(signal([[5, "pause"]]))).toMatchObject({ segments: [], hasSpeech: false });
+    expect(segmentByPauses(new Float32Array(SR * 3))).toMatchObject({ segments: [], hasSpeech: false });
+    expect(segmentByPauses(new Float32Array(0))).toMatchObject({ segments: [], hasSpeech: false });
+  });
+
+  it("reports how long the recording has been silent since the last speech", () => {
+    expect(segmentByPauses(signal([[2, "speech"], [0.7, "pause"]])).trailingSilence).toBeCloseTo(0.7, 1);
+    expect(segmentByPauses(signal([[1, "pause"], [2, "speech"]])).trailingSilence).toBeLessThan(0.05);
+    expect(segmentByPauses(signal([[3, "pause"]])).trailingSilence).toBeCloseTo(3, 1);
   });
 
   it("drops a segment that holds only a click, not speech", () => {

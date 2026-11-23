@@ -62,7 +62,8 @@ export interface RecitationState {
 }
 
 const MAX_SECONDS = 15 * 60;
-const UPDATE_MS = 400;
+/** How often the recording is looked at for pauses (a finished phrase is sent at the first look after it). */
+const UPDATE_MS = 250;
 /**
  * The longest phrase sent to the model while following: where a reciter leaves no pause, the book is
  * never more than this behind, and the model is not handed several ayahs at once.

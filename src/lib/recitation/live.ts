@@ -14,13 +14,17 @@ export interface LiveOptions extends SegmentOptions {
 const PARTIAL_GROWTH_SECONDS = 0.6;
 /** The open segment must be at least this long to be worth a partial transcription. */
 const PARTIAL_MIN_SECONDS = 0.8;
+/** The reciter counts as speaking (worth a partial transcription) until this much silence. */
+const SPEAKING_GAP_SECONDS = 0.2;
+/** After this long a pause ends even a short phrase, which a shorter pause would join to the next. */
+const LONG_PAUSE_SECONDS = 1;
 
 /**
  * Transcribes a recitation while it is being recorded. Each time `update` is called with everything
- * recorded so far, segments that are finished (the reciter has started the next phrase) are sent to
- * the speech model in the background, and, when the model is idle, the phrase still being recited is
- * transcribed provisionally. After the reciter stops, only the last segment remains, so the results
- * are ready almost immediately.
+ * recorded so far, phrases that are finished (the reciter has paused) are sent to the speech model in
+ * the background, and, when the model is idle and the reciter is speaking, the phrase still being
+ * recited is transcribed provisionally. After the reciter stops, only the last phrase remains, so the
+ * results are ready almost immediately.
  */
 export class LiveTranscriber {
   /** Samples already handed to the model as finished segments. */
@@ -87,17 +91,29 @@ export class LiveTranscriber {
   update(samples: Float32Array): void {
     const base = this.committed;
     const tail = samples.subarray(base);
-    const { segments } = segmentByPauses(tail, { ...this.options, threshold: this.threshold(samples) });
-    if (segments.length >= 2) {
-      // Every segment but the last is final: its end is the middle of a pause the reciter has finished.
-      for (const s of segments.slice(0, -1)) this.send(tail.slice(s.start, s.end));
-      this.committed += segments[segments.length - 2]!.end;
+    const rate = this.options.sampleRate ?? 16000;
+    const { segments, trailingSilence } = segmentByPauses(tail, { ...this.options, threshold: this.threshold(samples) });
+    // Every segment but the last is finished: the reciter has paused after it and gone on. So is the
+    // last one once the reciter pauses after it, at once (a phrase too short to stand alone, which the
+    // next would take in, after a longer pause): its words need not wait for the next phrase.
+    let finished = segments.length - 1;
+    const last = segments.at(-1);
+    if (last) {
+      const seconds = (last.end - last.start) / rate;
+      const pause = this.options.minPauseSeconds ?? 0.35;
+      const short = seconds < (this.options.minSegmentSeconds ?? 1.2);
+      if (trailingSilence >= (short ? LONG_PAUSE_SECONDS : pause)) finished = segments.length;
     }
-    const open = segments.at(-1);
-    if (!this.options.onPartial || !open || this.inFlight > 0) return;
+    if (finished > 0) {
+      for (const s of segments.slice(0, finished)) this.send(tail.slice(s.start, s.end));
+      this.committed += segments[finished - 1]!.end;
+    }
+    // While the reciter speaks, the phrase so far, provisionally; never while a finished one waits, and
+    // not in a pause, where the phrase is about to be finished.
+    const open = finished < segments.length ? segments.at(-1) : undefined;
+    if (!this.options.onPartial || !open || this.inFlight > 0 || trailingSilence >= SPEAKING_GAP_SECONDS) return;
     const start = base + open.start;
     const length = samples.length - start;
-    const rate = this.options.sampleRate ?? 16000;
     const index = this.parts.length;
     if (length < PARTIAL_MIN_SECONDS * rate) return;
     if (index === this.partialIndex && length - this.partialLength < PARTIAL_GROWTH_SECONDS * rate) return;

@@ -134,13 +134,17 @@ A service worker ([`src/sw.js`](src/sw.js)) keeps the site's own files on the de
    clip. The recording is cut at every pause of at least 0.35 s, so each segment is about one ayah or phrase;
    while following, a segment longer than 15 s (a long ayah with no pause) is cut at its quietest point, so the
    book is never far behind.
-4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: in Chromium browsers the encoder on
-   WebGPU when the device has a real GPU adapter, and everything else (all of it in Safari, on iPhone and in
-   Firefox) on multithreaded WebAssembly. The model makes one run on a second of silence while it loads, so the
-   first phrase is not slowed by setting it up. Each finished segment is transcribed as
-   soon as you start the next one. While the model has nothing finished to do, it also transcribes the phrase you
-   are still reciting, about every second or two, so the words you are saying light up provisionally. Finished
-   segments always go first.
+4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: the encoder on WebGPU when the
+   device has a real GPU adapter, everything else on multithreaded WebAssembly. Every request costs at least one
+   pass of the encoder over a whole 30 s window, which on a phone's processor alone takes about a second; on its
+   graphics processor, a fraction of that. The model makes one run on a second of silence while it loads, so the
+   first phrase is not slowed by setting it up. The recording is looked at four times a second, and a phrase is
+   sent to the model as soon as you pause after it, without waiting for the next one (a phrase too short to stand
+   alone waits for a longer pause, as it would be joined to the next). While you are reciting and the model has
+   nothing finished to do, it also transcribes the phrase so far, so the words you are saying light up
+   provisionally; not in a pause, where the phrase is about to be finished. A request may produce at most
+   20 tokens per second of audio, well above the fastest recitation, so a model repeating itself cannot hold up
+   the phrases after it.
 5. **Find and follow.** Each finished segment is placed in the Quran (below) and its words are marked correct,
    different (wrong) or missed, plus any added words. Marks stay on the book until you clear them; the summary
    lists the ayahs to look at again and can start you on them.

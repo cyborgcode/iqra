@@ -153,12 +153,23 @@ async function load(id: ModelId, origin: string, engine: EnginePreference): Prom
   post({ type: "ready", model: id, backend, threads: env.backends.onnx.wasm?.numThreads ?? 1 });
 }
 
+/**
+ * The most tokens a phrase can take: well above the fastest recitation (about 3 words a second, at a
+ * few tokens each with their vowel marks), so it only stops the model when it repeats itself, which
+ * it otherwise does up to its limit of 448 tokens, holding up every phrase after.
+ */
+function tokenBudget(samples: number): number {
+  return Math.min(440, Math.ceil((samples / 16000) * 20) + 16);
+}
+
 async function transcribe(id: number, segments: Float32Array[]): Promise<void> {
   if (!current) throw new Error("model not loaded");
   const started = performance.now();
   const texts: string[] = [];
   for (const [i, segment] of segments.entries()) {
-    const output = await current.pipe(segment, { language: "arabic", task: "transcribe" });
+    const output = await current.pipe(segment, { language: "arabic", task: "transcribe", max_new_tokens: tokenBudget(segment.length) } as Parameters<
+      typeof current.pipe
+    >[1]);
     const text = Array.isArray(output) ? output.map((o) => o.text).join(" ") : output.text;
     texts.push(text.trim());
     post({ type: "segment", id, done: i + 1, total: segments.length });
