@@ -70,11 +70,15 @@ async function buildPipeline(model: ModelConfig, backend: Backend, onProgress: (
   };
   const config = await AutoConfig.from_pretrained(model.repo, options);
   const device = backend === "webgpu" ? { encoder_model: "webgpu", decoder_model_merged: "wasm" } : "wasm";
+  // Transformers.js looks the encoder's precision up by its session name ("model") when it lists the
+  // files to load, and by its file name when it loads them: with both, it never asks the Hub for a
+  // file this model does not have.
+  const dtype = { model: model.dtype.encoder_model!, ...model.dtype };
   const [whisper, tokenizer, processor] = await Promise.all([
     WhisperForConditionalGeneration.from_pretrained(model.repo, {
       ...options,
       config,
-      dtype: model.dtype,
+      dtype,
       device: device as "wasm",
       progress_callback,
     }),
