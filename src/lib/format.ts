@@ -1,8 +1,25 @@
 import type { Lang } from "../i18n";
 
-/** Arabic text uses Arabic-Indic digits throughout, as the Mushaf does (٦٠٤, ٩٧٪). */
+/**
+ * Which digits numbers are written with: Western Arabic numerals (1 2 3, as in the Maghrebi Mushaf) or
+ * Arabic-Indic ones (١ ٢ ٣, as in the Mashriqi Mushaf). Set from the settings before the app renders.
+ */
+export type Digits = "western" | "indic";
+
+let digits: Digits = "western";
+
+export function setDigits(d: Digits) {
+  digits = d;
+}
+
+export function currentDigits(): Digits {
+  return digits;
+}
+
+/** The Arabic interface follows the digits setting; the English one always uses 1 2 3. */
 function locale(lang: Lang): string {
-  return lang === "ar" ? "ar-u-nu-arab" : lang;
+  if (lang !== "ar") return lang;
+  return digits === "indic" ? "ar-u-nu-arab" : "ar-u-nu-latn";
 }
 
 /** "67 MB" / "٦٧ ميغابايت" (decimal megabytes, as download sizes are usually shown). */
@@ -19,9 +36,9 @@ export function formatNumber(n: number, lang: Lang): string {
   return new Intl.NumberFormat(locale(lang)).format(n);
 }
 
-/** Ayah numbers in Arabic-Indic digits, as in the Mushaf. */
+/** Ayah and page numbers on the Mushaf page, in the chosen digits in every interface language. */
 export function ayahNumber(n: number): string {
-  return new Intl.NumberFormat("ar-u-nu-arab").format(n);
+  return new Intl.NumberFormat(digits === "indic" ? "ar-u-nu-arab" : "en").format(n);
 }
 
 export function formatDuration(seconds: number, lang: Lang): string {

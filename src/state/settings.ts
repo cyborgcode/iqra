@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import type { ModelId } from "../config/models";
 import type { EnginePreference } from "../lib/asr/protocol";
+import type { Digits } from "../lib/format";
 import { defaultLang, STRINGS, type Lang, type Strings } from "../i18n";
 
 export type ThemeSetting = "system" | "light" | "dark";
@@ -16,6 +17,8 @@ export interface Settings {
   memorize: boolean;
   /** "fit": each Mushaf page is sized to fit the screen; larger sizes scroll when needed. */
   textSize: TextSize;
+  /** 1 2 3 or ١ ٢ ٣ for ayah numbers, page numbers and the Arabic interface. */
+  digits: Digits;
 }
 
 export type TextSize = "fit" | "large" | "xlarge";
@@ -26,7 +29,7 @@ export const SETTINGS_KEY = "iqra.settings";
 export const DEFAULT_THRESHOLD = 0.7;
 
 export function defaultSettings(): Settings {
-  return { lang: defaultLang(), theme: "system", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false, textSize: "fit" };
+  return { lang: defaultLang(), theme: "system", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false, textSize: "fit", digits: "western" };
 }
 
 export function loadSettings(): Settings {
@@ -41,6 +44,7 @@ export function loadSettings(): Settings {
       threshold: typeof saved.threshold === "number" && saved.threshold >= 0.5 && saved.threshold <= 0.95 ? saved.threshold : base.threshold,
       memorize: saved.memorize === true,
       textSize: saved.textSize === "large" || saved.textSize === "xlarge" ? saved.textSize : "fit",
+      digits: saved.digits === "indic" ? "indic" : "western",
     };
   } catch {
     return base;

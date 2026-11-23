@@ -5,7 +5,7 @@ import { PAGE_COUNT, ayahRef, juzOfAyah, pageAyahs, quarterOfAyah, quarterStarti
 import type { Corpus } from "../lib/quran/corpus";
 import { loadSurah } from "../lib/quran/load";
 import { tokenizeAyah } from "../lib/quran/tokenize";
-import { ayahNumber } from "../lib/format";
+import { ayahNumber, currentDigits } from "../lib/format";
 import type { ExtraMark, WordMark } from "../lib/recitation/tracker";
 import { marks } from "../state/recitation";
 import { useSettings } from "../state/settings";
@@ -201,8 +201,7 @@ export function MushafPage(props: Props) {
                         onSelect(selected === a.index ? null : a.index);
                       }}
                     >
-                      {/* The end-of-ayah sign followed by the number: the font draws them as one ornament. */}
-                      {`\u06DD${ayahNumber(a.ayah)}`}
+                      <AyahOrnament n={a.ayah} />
                     </span>{" "}
                   </span>
                 </Fragment>
@@ -254,6 +253,24 @@ function SurahHeading({ surah, bismillah }: { surah: number; bismillah: string |
       </span>
       {bismillah && <span className="basmala">{bismillah}</span>}
     </span>
+  );
+}
+
+/**
+ * The end-of-ayah sign with the ayah's number. Given Arabic-Indic digits, the Mushaf font draws sign and
+ * number as one ornament; it does not enclose 1 2 3, so for those its empty sign (always 1.28 em wide)
+ * is drawn and the number is centred on it.
+ */
+function AyahOrnament({ n }: { n: number }) {
+  const number = ayahNumber(n);
+  if (currentDigits() === "indic") return <>{`\u06DD${number}`}</>;
+  return (
+    <>
+      {"\u06DD"}
+      <span className={`ayah-num${number.length > 2 ? " ayah-num-long" : ""}`}>
+        <span>{number}</span>
+      </span>
+    </>
   );
 }
 

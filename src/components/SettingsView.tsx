@@ -39,6 +39,18 @@ export function SettingsView() {
           value={settings.lang}
           onValueChange={(v) => update({ lang: v === "ar" ? "ar" : "en" })}
         />
+        <h2 className="setting-title mt-2" id="set-digits">
+          {t.setNumbers}
+        </h2>
+        <Segmented
+          aria-labelledby="set-digits"
+          items={[
+            { value: "western", label: "123" },
+            { value: "indic", label: "\u0661\u0662\u0663" },
+          ]}
+          value={settings.digits}
+          onValueChange={(v) => update({ digits: v === "indic" ? "indic" : "western" })}
+        />
       </Glass>
 
       <Glass className="card setting">

@@ -1,3 +1,5 @@
+import { formatNumber } from "./lib/format";
+
 export type Lang = "ar" | "en";
 
 const en = {
@@ -173,6 +175,7 @@ const en = {
   amin: "Āmīn",
   lastResults: "Show the last results",
   moreTitle: "More",
+  setNumbers: "Numbers",
   modelIntro: "iqra listens with a speech model that runs on this device. Once it is ready, press the microphone and recite from anywhere: the Mushaf finds the ayah and follows along.",
   textSizeTitle: "Mushaf text size",
   textFit: "Fit the page",
@@ -199,7 +202,7 @@ const ar: Strings = {
 
   searchSurah: "ابحث بالاسم أو الرقم",
   noSurahFound: "لا توجد سورة تطابق البحث.",
-  ayahCount: (n) => `${n.toLocaleString("ar-u-nu-arab")} ${n === 1 ? "آية" : n === 2 ? "آيتان" : n <= 10 ? "آيات" : "آية"}`,
+  ayahCount: (n) => `${formatNumber(n, "ar")} ${n === 1 ? "آية" : n === 2 ? "آيتان" : n <= 10 ? "آيات" : "آية"}`,
 
   modelNeeded: "يحتاج نموذج التعرّف على الصوت إلى تنزيل لمرة واحدة.",
   modelSize: (size) => `تنزيل ${size}`,
@@ -261,7 +264,7 @@ const ar: Strings = {
   engineAuto: "تلقائي",
   engineWasm: "توافقية",
   engineNote: "يستخدم الوضع التلقائي معالج الرسوميات (WebGPU) إن وُجد في جهازك. اختر «توافقية» إن كان التعرّف بطيئًا أو تعذّر.",
-  engineInUse: (name, threads) => `المستخدم الآن: ${name}${threads > 1 ? `، ${threads.toLocaleString("ar-u-nu-arab")} مسارات` : ""}.`,
+  engineInUse: (name, threads) => `المستخدم الآن: ${name}${threads > 1 ? `، ${formatNumber(threads, "ar")} مسارات` : ""}.`,
   setStrictness: "درجة التدقيق",
   strictnessNote: "مدى تطابق كل كلمة مع النص. المتساهل يتجاوز أخطاء التعرّف الصغيرة، والصارم ينبّه حتى على الفروق الصغيرة.",
   lenient: "متساهل",
@@ -357,6 +360,7 @@ const ar: Strings = {
   amin: "آمين",
   lastResults: "اعرض آخر نتيجة",
   moreTitle: "المزيد",
+  setNumbers: "الأرقام",
   modelIntro: "يستمع «اقرأ» بنموذج صوتي يعمل على جهازك. بعد تجهيزه اضغط الميكروفون واقرأ من أي موضع، فيجد المصحف الآية ويتابعك.",
   textSizeTitle: "حجم خط المصحف",
   textFit: "ملء الصفحة",

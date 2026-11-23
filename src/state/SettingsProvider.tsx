@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { setDigits } from "../lib/format";
 import { SettingsContext, loadSettings, saveSettings, stringsFor, type Settings } from "./settings";
 
 function systemTheme(): "light" | "dark" {
@@ -25,6 +26,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resolvedTheme = settings.theme === "system" ? system : settings.theme;
+  // Number formatting reads this directly; it must be current before anything below renders.
+  setDigits(settings.digits);
 
   useEffect(() => {
     const root = document.documentElement;
