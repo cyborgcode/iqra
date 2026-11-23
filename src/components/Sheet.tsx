@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Button, Glass } from "glisse";
 import { useSettings } from "../state/settings";
 import { CrossIcon } from "./icons";
@@ -11,6 +11,9 @@ interface Props {
   className?: string;
 }
 
+/** A little longer than the sheet's exit transition. */
+const CLOSE_MS = 300;
+
 /**
  * A modal sheet built on <dialog>: focus moves into it and back, Escape closes it, and the rest of
  * the page is inert while it is open. It rises from the bottom on phones and is centred on wide screens.
@@ -19,6 +22,14 @@ export function Sheet({ open, onClose, title, children, className = "" }: Props)
   const { t } = useSettings();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  // The contents stay while the sheet slides away (index.css), then go.
+  const [shown, setShown] = useState(open);
+  if (open && !shown) setShown(true);
+  useEffect(() => {
+    if (open) return;
+    const id = setTimeout(() => setShown(false), CLOSE_MS);
+    return () => clearTimeout(id);
+  }, [open]);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -38,7 +49,7 @@ export function Sheet({ open, onClose, title, children, className = "" }: Props)
         if (e.target === ref.current) onClose();
       }}
     >
-      {open && (
+      {shown && (
         <Glass className="sheet-panel">
           <div className="sheet-head">
             <h2 id={titleId} className="sheet-title">

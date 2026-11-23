@@ -1387,7 +1387,13 @@ a {
 
 /* ---------- Sheets ---------- */
 
+/* A sheet rises and fades in when it opens, and sinks and fades out when it closes: it stays drawn
+   (display, and the top layer where browsers allow it) until its exit has played. It keeps the place of
+   an open sheet while it closes, in browsers that take it out of the top layer at once. */
 .sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
   margin: auto auto 0;
   inline-size: 100%;
   max-inline-size: 100%;
@@ -1397,23 +1403,45 @@ a {
   background: transparent;
   color: inherit;
   overflow: visible;
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.2s ease-in,
+    transform 0.22s ease-in,
+    overlay 0.22s allow-discrete,
+    display 0.22s allow-discrete;
+}
+.sheet[open] {
+  opacity: 1;
+  transform: none;
+  transition-duration: 0.26s, 0.34s, 0.34s, 0.34s;
+  transition-timing-function: ease-out, cubic-bezier(0.2, 0, 0, 1);
+}
+@starting-style {
+  .sheet[open] {
+    opacity: 0;
+    transform: translateY(40px);
+  }
 }
 /* The page behind a sheet is dimmed lightly in light mode, so the sheet's translucent glass stays light,
    and strongly in dark mode. (Selectors, not variables: older browsers give ::backdrop no inherited values.) */
 .sheet::backdrop {
-  background: rgb(15 30 50 / 0.16);
+  background-color: rgb(15 30 50 / 0);
   backdrop-filter: blur(2px);
+  transition:
+    background-color 0.26s ease,
+    overlay 0.26s allow-discrete,
+    display 0.26s allow-discrete;
 }
-[data-theme="dark"] .sheet::backdrop {
-  background: rgb(0 0 0 / 0.6);
+.sheet[open]::backdrop {
+  background-color: rgb(15 30 50 / 0.16);
 }
-.sheet[open] {
-  animation: iqra-sheet 0.28s ease-out;
+[data-theme="dark"] .sheet[open]::backdrop {
+  background-color: rgb(0 0 0 / 0.6);
 }
-@keyframes iqra-sheet {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
+@starting-style {
+  .sheet[open]::backdrop {
+    background-color: rgb(15 30 50 / 0);
   }
 }
 .sheet-panel {
@@ -1623,6 +1651,123 @@ a {
   color: var(--accent);
 }
 
+/* ---------- Transitions ---------- */
+
+/* Changes of screen are view transitions (src/lib/motion.ts), named by <html data-transition>:
+   - page-next / page-prev: only the page moves; it slides out (from where a swipe left it) as the next
+     one slides in from the other side. The next page lies to the left, as in a Mushaf.
+   - view: the old view fades away and the new one rises into place; the header and tab bar stay put.
+   - fade: a change of look (theme, colour, language, numbers, text size, memorizing) crossfades. */
+.app-main {
+  view-transition-name: main;
+}
+.page-turn {
+  view-transition-name: mushaf;
+}
+::view-transition-group(*) {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+:root[data-transition^="page"]::view-transition-old(root),
+:root[data-transition^="page"]::view-transition-old(main) {
+  animation: none;
+  opacity: 0;
+}
+:root[data-transition^="page"]::view-transition-new(root),
+:root[data-transition^="page"]::view-transition-new(main),
+:root[data-transition^="page"]::view-transition-group(mushaf) {
+  animation: none;
+}
+:root[data-transition="page-next"]::view-transition-old(mushaf) {
+  animation:
+    iqra-slide-out-next 0.26s ease-in both,
+    iqra-fade-out 0.13s ease-out both;
+}
+:root[data-transition="page-next"]::view-transition-new(mushaf) {
+  animation:
+    iqra-slide-in-next 0.36s cubic-bezier(0.2, 0, 0, 1) both,
+    iqra-fade-in 0.2s ease-out 0.07s both;
+}
+:root[data-transition="page-prev"]::view-transition-old(mushaf) {
+  animation:
+    iqra-slide-out-prev 0.26s ease-in both,
+    iqra-fade-out 0.13s ease-out both;
+}
+:root[data-transition="page-prev"]::view-transition-new(mushaf) {
+  animation:
+    iqra-slide-in-prev 0.36s cubic-bezier(0.2, 0, 0, 1) both,
+    iqra-fade-in 0.2s ease-out 0.07s both;
+}
+@keyframes iqra-slide-out-next {
+  from {
+    transform: translateX(var(--turn-from, 0px));
+  }
+  to {
+    transform: translateX(calc(var(--turn-from, 0px) + 30%));
+  }
+}
+@keyframes iqra-slide-in-next {
+  from {
+    transform: translateX(-24%);
+  }
+}
+@keyframes iqra-slide-out-prev {
+  from {
+    transform: translateX(var(--turn-from, 0px));
+  }
+  to {
+    transform: translateX(calc(var(--turn-from, 0px) - 30%));
+  }
+}
+@keyframes iqra-slide-in-prev {
+  from {
+    transform: translateX(24%);
+  }
+}
+
+:root[data-transition="view"]::view-transition-group(main) {
+  animation: none;
+}
+:root[data-transition="view"]::view-transition-old(main),
+:root[data-transition="view"]::view-transition-old(mushaf) {
+  animation: iqra-fade-out 0.12s ease-out both;
+}
+:root[data-transition="view"]::view-transition-new(main) {
+  animation:
+    iqra-rise-in 0.34s cubic-bezier(0.2, 0, 0, 1) 0.06s both,
+    iqra-fade-in 0.2s ease-out 0.06s both;
+}
+@keyframes iqra-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes iqra-rise-in {
+  from {
+    transform: translateY(12px);
+  }
+}
+
+:root[data-transition="fade"]::view-transition-group(*) {
+  animation-duration: 0s;
+}
+:root[data-transition="fade"]::view-transition-old(*),
+:root[data-transition="fade"]::view-transition-new(*) {
+  animation-duration: 0.3s;
+}
+
+/* Within the dock, what appears (the status while reciting, the buttons after) fades in. */
+.dock > *,
+.dock-float > * {
+  animation: iqra-fade-in 0.22s ease-out;
+}
+@keyframes iqra-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* ---------- Motion ---------- */
 
 @keyframes iqra-spin {
@@ -1636,15 +1781,23 @@ a {
   }
   .page-turn.turn-next,
   .page-turn.turn-prev,
-  .sheet[open],
   .ayah-flash,
-  .w-next {
+  .w-next,
+  .dock > *,
+  .dock-float > * {
     animation: none;
   }
   .score-fill,
   .progress-fill,
   .page-turn,
-  .mic {
+  .mic,
+  .sheet,
+  .sheet::backdrop {
     transition: none;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

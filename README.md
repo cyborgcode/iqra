@@ -365,6 +365,14 @@ $\ell$ the longest label's width, $W$ the width available and $n$ the number of 
 $w = \min\big(\max(84,\ \ell + 24),\ \lfloor W/n \rfloor\big)$ px wide, and labels only wrap (in taller segments)
 when $w < \ell + 4$.
 
+### Motion
+
+Changes of screen are [view transitions](https://developer.mozilla.org/docs/Web/API/View_Transition_API)
+([`src/lib/motion.ts`](src/lib/motion.ts)): a page turn slides the page out, from wherever a swipe left it, as the next
+one slides in from the other side; another view fades through; a change of theme, colour, language, numbers or text
+size crossfades. Sheets rise in and sink out. Everything is still with the system's reduced-motion setting, and
+browsers without view transitions get a simple slide for page turns.
+
 ## Limitations
 
 - Words are compared, not tajweed or vowel marks. A wrong vowel inside a correct word is not detected.

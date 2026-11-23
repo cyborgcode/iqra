@@ -16,6 +16,7 @@ import {
   type Summary,
 } from "../state/recitation";
 import { clearFocusAyah, currentRoute, goToAyah, goToPage, useFocusAyah } from "../state/route";
+import { viewTransitions } from "../lib/motion";
 import { useSettings } from "../state/settings";
 import { loadText, useText } from "../state/text";
 import { openSheet, useSheet } from "../state/ui";
@@ -53,6 +54,8 @@ function useMedia(query: string): boolean {
   );
 }
 
+/** How much of a horizontal drag the page follows. */
+const DRAG_FOLLOW = 0.85;
 /** A horizontal swipe of at least this many pixels turns the page. */
 const SWIPE_PX = 64;
 
@@ -121,14 +124,15 @@ export function BookView({ page }: { page: number }) {
     if (sheet === "model" && model.phase === "ready") openSheet(null);
   }, [sheet, model.phase]);
 
-  const turn = useCallback((delta: 1 | -1) => {
+  /** Turns a page (two in a spread); `dragged` is how far a swipe had moved it, in pixels. */
+  const turn = useCallback((delta: 1 | -1, dragged = 0) => {
     const route = currentRoute();
     if (route.view !== "book") return;
     const from = latest.current.spread ? spreadOf(route.page)[0]! : route.page;
     const next = from + delta * (latest.current.spread ? 2 : 1);
     if (next >= 1 && next <= PAGE_COUNT) {
       setSelected(null);
-      goToPage(next);
+      goToPage(next, { from: dragged });
     }
   }, []);
 
@@ -257,7 +261,7 @@ export function BookView({ page }: { page: number }) {
           }
           if (g.active) {
             g.dx = dx;
-            setDrag(dx * 0.85);
+            setDrag(dx * DRAG_FOLLOW);
           }
         }}
         onPointerUp={() => {
@@ -266,8 +270,8 @@ export function BookView({ page }: { page: number }) {
           if (!g?.active) return;
           setDrag(0);
           // Swiping towards the right brings in the next page, which lies to the left in a Mushaf.
-          if (g.dx > SWIPE_PX) turn(1);
-          else if (g.dx < -SWIPE_PX) turn(-1);
+          if (g.dx > SWIPE_PX) turn(1, g.dx * DRAG_FOLLOW);
+          else if (g.dx < -SWIPE_PX) turn(-1, g.dx * DRAG_FOLLOW);
         }}
         onPointerCancel={() => {
           gesture.current = null;
@@ -277,7 +281,8 @@ export function BookView({ page }: { page: number }) {
         <div
           key={pages.join("-")}
           dir="rtl"
-          className={`page-turn ${shown.first === pages[0] ? shown.turn : ""}`}
+          // With view transitions the turn is animated by them (see motion.ts); otherwise the new page slides in.
+          className={`page-turn ${!viewTransitions() && shown.first === pages[0] ? shown.turn : ""}`}
           style={drag ? { transform: `translateX(${drag}px)`, transition: "none" } : undefined}
         >
           {pages.map((p, i) => (

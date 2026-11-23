@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { PAGE_COUNT, pageOfAyah } from "../lib/quran/book";
+import { transition, type TransitionKind } from "../lib/motion";
 
 /** The views of the app, each with its own address: /page/1…604, /settings, /about. */
 export type Route = { view: "book"; page: number } | { view: "settings" } | { view: "about" };
@@ -55,7 +56,23 @@ function set(next: Route) {
   emit();
 }
 
-addEventListener("popstate", () => set(parseRoute(location.pathname)));
+/** How the screen changes between two routes: a page turn forwards or back, or another view. */
+function kindOf(from: Route, to: Route): TransitionKind {
+  if (from.view === "book" && to.view === "book") return to.page > from.page ? "page-next" : "page-prev";
+  return "view";
+}
+
+/** Shows a route, animated as a page turn or a change of view. */
+function show(next: Route, from = 0) {
+  transition(kindOf(route, next), () => set(next), { from });
+}
+
+addEventListener("popstate", (event) => {
+  const next = parseRoute(location.pathname);
+  // After a browser's own back or forward animation (a swipe on iOS, for one), no second animation.
+  if ((event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition) set(next);
+  else show(next);
+});
 
 export function useRoute(): Route {
   return useSyncExternalStore(subscribe, () => route);
@@ -65,16 +82,17 @@ export function currentRoute(): Route {
   return route;
 }
 
-export function navigate(next: Route, { replace = false } = {}) {
+/** `from`: how far the page was dragged, in pixels, when a swipe turns it. */
+export function navigate(next: Route, { replace = false, from = 0 } = {}) {
   const path = pathOf(next);
   if (location.pathname !== path) {
     if (replace) history.replaceState(null, "", path);
     else history.pushState(null, "", path);
   }
-  if (path !== pathOf(route)) set(next);
+  if (path !== pathOf(route)) show(next, from);
 }
 
-export function goToPage(page: number, options?: { replace?: boolean }) {
+export function goToPage(page: number, options?: { replace?: boolean; from?: number }) {
   navigate({ view: "book", page: Math.min(PAGE_COUNT, Math.max(1, Math.round(page))) }, options);
 }
 
