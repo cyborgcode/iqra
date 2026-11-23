@@ -7,7 +7,8 @@
     var root = document.documentElement;
     root.lang = lang;
     root.dir = lang === "ar" ? "rtl" : "ltr";
-    var theme = saved.theme || "system";
+    // AMOLED dark is the default; "system" saved before settings version 2 was the old default.
+    var theme = saved.theme === "light" || saved.theme === "dark" ? saved.theme : saved.theme === "system" && saved.version === 2 ? "system" : "dark";
     if (theme === "system") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     root.dataset.theme = theme;
     var palettes = ["sky", "emerald", "sand", "lavender", "graphite"];

@@ -68,6 +68,7 @@ export function SettingsView() {
           value={settings.theme}
           onValueChange={(v) => update({ theme: v === "light" || v === "dark" ? v : "system" })}
         />
+        <p className="text-muted text-sm">{t.themeNote}</p>
         <h2 className="setting-title mt-2" id="set-color">
           {t.setColor}
         </h2>

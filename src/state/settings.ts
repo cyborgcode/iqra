@@ -31,17 +31,21 @@ export const SETTINGS_KEY = "iqra.settings";
 
 export const DEFAULT_THRESHOLD = 0.7;
 
+/** Version 2 made AMOLED dark the default theme (see loadSettings). */
+export const SETTINGS_VERSION = 2;
+
 export function defaultSettings(): Settings {
-  return { lang: defaultLang(), theme: "system", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false, textSize: "fit", digits: "western", palette: "sky" };
+  return { lang: defaultLang(), theme: "dark", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false, textSize: "fit", digits: "western", palette: "sky" };
 }
 
 export function loadSettings(): Settings {
   const base = defaultSettings();
   try {
-    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<Settings>;
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<Settings> & { version?: number };
     return {
       lang: saved.lang === "ar" || saved.lang === "en" ? saved.lang : base.lang,
-      theme: saved.theme === "light" || saved.theme === "dark" ? saved.theme : "system",
+      // Settings saved before version 2 hold the old default "system": AMOLED dark is the default now.
+      theme: saved.theme === "light" || saved.theme === "dark" ? saved.theme : saved.theme === "system" && saved.version === SETTINGS_VERSION ? "system" : "dark",
       model: saved.model === "accurate" ? "accurate" : "standard",
       engine: saved.engine === "wasm" ? "wasm" : "auto",
       threshold: typeof saved.threshold === "number" && saved.threshold >= 0.5 && saved.threshold <= 0.95 ? saved.threshold : base.threshold,
@@ -57,7 +61,7 @@ export function loadSettings(): Settings {
 
 export function saveSettings(settings: Settings) {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, version: SETTINGS_VERSION }));
   } catch {
     // Private mode or storage disabled: settings just won't persist.
   }

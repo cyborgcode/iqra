@@ -9,9 +9,11 @@ added.
   hizb-quarter signs, and juz and hizb divisions from Tanzil's metadata. Each page fills the screen like a printed
   page, with nothing to scroll; wide screens show two pages side by side, as an open Mushaf. Contents by surah, juz,
   hizb quarter, page number or `surah:ayah`; swipe, arrow keys or the page footer to turn pages. Ayah and page
-  numbers are written 1 2 3 by default, or ١ ٢ ٣ (Settings → Numbers). Five theme colours (Sky, Emerald, Sand,
-  Lavender, Graphite), each in light and dark, are derived in OKLCH from one hue, so every palette keeps the same
-  contrast (Quran text above 14:1 on the page, secondary text above 6:1).
+  numbers are written 1 2 3 by default, or ١ ٢ ٣ (Settings → Numbers).
+- **AMOLED black, in bleu ciel.** Dark mode, the default, is true black everywhere (page, sheets, controls), with
+  bleu ciel accents and black icons on bleu ciel buttons; a light mode is one tap away in Settings. Five theme
+  colours (Sky, Emerald, Sand, Lavender, Graphite) are derived in OKLCH from one hue, so every palette keeps the
+  same contrast: Quran text 17.6:1 on black (14:1 in light mode), secondary text above 6:1.
 - **Start anywhere, follow along.** The first words you recite are looked up in all 77,433 words of the Quran. From
   then on the book follows you, turning pages as you go, with words lighting up while you recite them.
 - **Recite from memory.** Hide the words; each one appears as you recite it. Press and hold an ayah to peek, or ask

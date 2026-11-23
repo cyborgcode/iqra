@@ -28,6 +28,7 @@
     "eslint.config.js",
     "scripts",
     "src/**/*.test.ts",
-    "src/test"
+    "src/test",
+    "src/vite-env.d.ts"
   ]
 }

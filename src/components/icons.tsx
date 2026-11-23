@@ -133,8 +133,8 @@ export const ArrowIcon = (p: IconProps) => (
 );
 
 /**
- * iqra's mark: an open Mushaf on a rounded tile in the theme's colour. Drawn for iqra; src/lib/brand.ts
- * draws the same mark as a string for the favicon.
+ * iqra's mark: a black open Mushaf on a rounded tile in the theme's light colour (bleu ciel by default).
+ * Drawn for iqra; src/lib/brand.ts draws the same mark as a string for the favicon.
  */
 export function AppMark({ size = 32, ...rest }: IconProps) {
   const id = useId();
@@ -149,7 +149,7 @@ export function AppMark({ size = 32, ...rest }: IconProps) {
       </defs>
       <rect width="64" height="64" rx="15" fill={gradient} />
       <g transform="translate(32 32) scale(1.2) translate(-32 -40.1)">
-        <path d="M32 31.5c-5.6-4.4-13.6-5.2-20-3.6v22.2c6.4-1.6 14.4-.8 20 3.6 5.6-4.4 13.6-5.2 20-3.6V27.9c-6.4-1.6-14.4-.8-20 3.6Z" fill="#fff" />
+        <path d="M32 31.5c-5.6-4.4-13.6-5.2-20-3.6v22.2c6.4-1.6 14.4-.8 20 3.6 5.6-4.4 13.6-5.2 20-3.6V27.9c-6.4-1.6-14.4-.8-20 3.6Z" fill="var(--mic-ink)" />
         <path d="M32 33v19" stroke={gradient} strokeWidth="2.2" strokeLinecap="round" />
       </g>
     </svg>
