@@ -1,4 +1,5 @@
 import { formatNumber } from "./lib/format";
+import type { PaletteId } from "./lib/palettes";
 
 export type Lang = "ar" | "en";
 
@@ -176,6 +177,8 @@ const en = {
   lastResults: "Show the last results",
   moreTitle: "More",
   setNumbers: "Numbers",
+  setColor: "Theme colour",
+  paletteNames: { sky: "Sky", emerald: "Emerald", sand: "Sand", lavender: "Lavender", graphite: "Graphite" } as Record<PaletteId, string>,
   modelIntro: "iqra listens with a speech model that runs on this device. Once it is ready, press the microphone and recite from anywhere: the Mushaf finds the ayah and follows along.",
   textSizeTitle: "Mushaf text size",
   textFit: "Fit the page",
@@ -361,6 +364,8 @@ const ar: Strings = {
   lastResults: "اعرض آخر نتيجة",
   moreTitle: "المزيد",
   setNumbers: "الأرقام",
+  setColor: "لون السمة",
+  paletteNames: { sky: "سماء", emerald: "زمرّد", sand: "رمل", lavender: "خزامى", graphite: "رمادي" },
   modelIntro: "يستمع «اقرأ» بنموذج صوتي يعمل على جهازك. بعد تجهيزه اضغط الميكروفون واقرأ من أي موضع، فيجد المصحف الآية ويتابعك.",
   textSizeTitle: "حجم خط المصحف",
   textFit: "ملء الصفحة",

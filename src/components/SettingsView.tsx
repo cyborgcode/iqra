@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Button, Glass } from "glisse";
 import { RangeSlider, Segmented, Toggle } from "./Directional";
 import { MODELS, RUNTIME, modelBytes } from "../config/models";
+import { PALETTES } from "../lib/palettes";
 import { deleteDownloads, engineFor } from "../lib/asr/client";
 import { formatMegabytes, formatPercent } from "../lib/format";
 import { resetModel, useModelStatus } from "../state/model";
 import { DEFAULT_THRESHOLD, useSettings } from "../state/settings";
-import { TrashIcon } from "./icons";
+import { CheckIcon, TrashIcon } from "./icons";
 
 export function SettingsView() {
   const { t, settings, update } = useSettings();
@@ -67,6 +68,10 @@ export function SettingsView() {
           value={settings.theme}
           onValueChange={(v) => update({ theme: v === "light" || v === "dark" ? v : "system" })}
         />
+        <h2 className="setting-title mt-2" id="set-color">
+          {t.setColor}
+        </h2>
+        <PalettePicker />
       </Glass>
 
       <Glass className="card setting">
@@ -178,6 +183,55 @@ export function SettingsView() {
           )}
         </div>
       </Glass>
+    </div>
+  );
+}
+
+/** The theme colours as a row of swatches (a radio group: arrow keys move between them). */
+function PalettePicker() {
+  const { t, settings, update } = useSettings();
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const current = Math.max(0, PALETTES.findIndex((p) => p.id === settings.palette));
+  const choose = (i: number) => {
+    update({ palette: PALETTES[i]!.id });
+    buttons.current[i]?.focus();
+  };
+  return (
+    <div
+      role="radiogroup"
+      aria-labelledby="set-color"
+      className="swatches"
+      onKeyDown={(e) => {
+        const rtl = document.documentElement.dir === "rtl";
+        const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: 1, ArrowUp: -1 }[e.key];
+        if (step === undefined) return;
+        e.preventDefault();
+        choose((current + step + PALETTES.length) % PALETTES.length);
+      }}
+    >
+      {PALETTES.map((p, i) => {
+        const checked = i === current;
+        return (
+          <button
+            key={p.id}
+            ref={(el) => {
+              buttons.current[i] = el;
+            }}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            tabIndex={checked ? 0 : -1}
+            className="swatch"
+            style={{ "--h": p.h, "--c": p.c } as CSSProperties}
+            onClick={() => choose(i)}
+          >
+            <span className="swatch-dot" aria-hidden="true">
+              {checked && <CheckIcon size={18} />}
+            </span>
+            <span className="swatch-name">{t.paletteNames[p.id]}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { applyBrandColors } from "../lib/brand";
 import { setDigits } from "../lib/format";
 import { SettingsContext, loadSettings, saveSettings, stringsFor, type Settings } from "./settings";
 
@@ -37,8 +38,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.lang]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = resolvedTheme;
-  }, [resolvedTheme]);
+    const root = document.documentElement;
+    root.dataset.theme = resolvedTheme;
+    root.dataset.palette = settings.palette;
+    applyBrandColors();
+  }, [resolvedTheme, settings.palette]);
 
   const value = useMemo(() => ({ settings, update, t: stringsFor(settings.lang), resolvedTheme }), [settings, update, resolvedTheme]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import type { ModelId } from "../config/models";
 import type { EnginePreference } from "../lib/asr/protocol";
 import type { Digits } from "../lib/format";
+import { isPalette, type PaletteId } from "../lib/palettes";
 import { defaultLang, STRINGS, type Lang, type Strings } from "../i18n";
 
 export type ThemeSetting = "system" | "light" | "dark";
@@ -19,6 +20,8 @@ export interface Settings {
   textSize: TextSize;
   /** 1 2 3 or ١ ٢ ٣ for ayah numbers, page numbers and the Arabic interface. */
   digits: Digits;
+  /** Theme colour (see src/lib/palettes.ts). */
+  palette: PaletteId;
 }
 
 export type TextSize = "fit" | "large" | "xlarge";
@@ -29,7 +32,7 @@ export const SETTINGS_KEY = "iqra.settings";
 export const DEFAULT_THRESHOLD = 0.7;
 
 export function defaultSettings(): Settings {
-  return { lang: defaultLang(), theme: "system", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false, textSize: "fit", digits: "western" };
+  return { lang: defaultLang(), theme: "system", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false, textSize: "fit", digits: "western", palette: "sky" };
 }
 
 export function loadSettings(): Settings {
@@ -45,6 +48,7 @@ export function loadSettings(): Settings {
       memorize: saved.memorize === true,
       textSize: saved.textSize === "large" || saved.textSize === "xlarge" ? saved.textSize : "fit",
       digits: saved.digits === "indic" ? "indic" : "western",
+      palette: isPalette(saved.palette) ? saved.palette : "sky",
     };
   } catch {
     return base;

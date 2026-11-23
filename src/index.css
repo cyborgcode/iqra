@@ -11,25 +11,32 @@
 /* ---------- Design tokens ---------- */
 
 :root {
-  /* "Blue sky": a clear day in light mode, a night sky in dark mode. */
+  /*
+   * Theme colours: every colour below is derived in OKLCH from one hue (--h) and a chroma scale (--c),
+   * so each palette keeps the same lightness and contrast. --hd is the hue of the dark-mode sky.
+   * The default is "Sky": a clear day in light mode, a night sky in dark mode.
+   */
+  --h: 237;
+  --c: 1;
+  --hd: 258;
+
   color-scheme: light;
-  --bg: #e4f2fd;
-  --sky-top: #b9e0fb;
-  --sky-bottom: #f2f9ff;
+  --bg: oklch(0.955 calc(0.02 * var(--c)) var(--h));
+  --sky-top: oklch(0.885 calc(0.055 * var(--c)) var(--h));
+  --sky-bottom: oklch(0.98 calc(0.012 * var(--c)) var(--h));
   --cloud: rgb(255 255 255 / 0.9);
   --cloud-soft: rgb(255 255 255 / 0.55);
-  --fg: #0b2545;
-  --muted: #45607d;
-  --accent: #0369a1;
-  --accent-soft: rgb(14 165 233 / 0.12);
-  --accent-line: rgb(2 132 199 / 0.42);
-  --brand-a: #0284c7;
-  --brand-b: #0891b2;
-  --mark-core: #f2f9ff;
+  --fg: oklch(0.27 calc(0.07 * var(--c)) var(--h));
+  --muted: oklch(0.47 calc(0.05 * var(--c)) var(--h));
+  --accent: oklch(0.5 calc(0.12 * var(--c)) var(--h));
+  --accent-soft: oklch(0.62 calc(0.14 * var(--c)) var(--h) / 0.12);
+  --accent-line: oklch(0.55 calc(0.13 * var(--c)) var(--h) / 0.42);
+  --brand-a: oklch(0.59 calc(0.14 * var(--c)) var(--h));
+  --brand-b: oklch(0.6 calc(0.11 * var(--c)) calc(var(--h) - 21));
   --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%230b2545' stroke-opacity='0.04' stroke-width='1'%3E%3Crect x='18' y='18' width='28' height='28'/%3E%3Crect x='18' y='18' width='28' height='28' transform='rotate(45 32 32)'/%3E%3Cpath d='M0 32h6M58 32h6M32 0v6M32 58v6'/%3E%3C/g%3E%3C/svg%3E");
-  --soft: rgb(11 37 69 / 0.045);
-  --hover: rgb(11 37 69 / 0.065);
-  --track: rgb(11 37 69 / 0.12);
+  --soft: oklch(0.3 calc(0.06 * var(--c)) var(--h) / 0.045);
+  --hover: oklch(0.3 calc(0.06 * var(--c)) var(--h) / 0.065);
+  --track: oklch(0.3 calc(0.06 * var(--c)) var(--h) / 0.12);
 
   /* Word statuses: colour is always paired with a second cue (underline, outline, icon). */
   --ok: #15803d;
@@ -38,38 +45,59 @@
   --extra: #7e22ce;
 
   /* The Mushaf page */
-  --page-bg: #fbfdff;
-  --page-line: rgb(2 132 199 / 0.2);
-  --page-shadow: 0 1px 2px rgb(7 46 89 / 0.06), 0 14px 38px -14px rgb(7 46 89 / 0.3);
-  --spine: rgb(7 46 89 / 0.28);
-  --mask: rgb(11 37 69 / 0.1);
-  --live: rgb(14 165 233 / 0.16);
+  --page-bg: oklch(0.993 calc(0.005 * var(--c)) var(--h));
+  --page-line: oklch(0.55 calc(0.13 * var(--c)) var(--h) / 0.2);
+  --page-shadow:
+    0 1px 2px oklch(0.3 calc(0.08 * var(--c)) var(--h) / 0.06), 0 14px 38px -14px oklch(0.3 calc(0.08 * var(--c)) var(--h) / 0.3);
+  --spine: oklch(0.3 calc(0.08 * var(--c)) var(--h) / 0.28);
+  --mask: oklch(0.3 calc(0.06 * var(--c)) var(--h) / 0.1);
+  --live: oklch(0.68 calc(0.15 * var(--c)) var(--h) / 0.16);
 
-  /* The microphone: white on a sky gradient dark enough to read. */
-  --mic-a: #0ea5e9;
-  --mic-b: #0369a1;
+  /* The microphone and the logo tile: white on a gradient dark enough to read. */
+  --mic-a: oklch(0.66 calc(0.15 * var(--c)) var(--h));
+  --mic-b: oklch(0.48 calc(0.12 * var(--c)) var(--h));
 
   /* glisse */
-  --lg-fill: #0284c7;
-  --lg-ring: rgb(2 132 199 / 0.6);
+  --lg-fill: var(--brand-a);
+  --lg-ring: oklch(0.55 calc(0.13 * var(--c)) var(--h) / 0.6);
+}
+
+:root[data-palette="emerald"] {
+  --h: 162;
+  --c: 0.95;
+  --hd: 175;
+}
+:root[data-palette="sand"] {
+  --h: 68;
+  --c: 0.8;
+  --hd: 60;
+}
+:root[data-palette="lavender"] {
+  --h: 292;
+  --c: 0.95;
+  --hd: 285;
+}
+:root[data-palette="graphite"] {
+  --h: 255;
+  --c: 0.18;
+  --hd: 260;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #06132a;
-  --sky-top: #030c1f;
-  --sky-bottom: #0b2149;
-  --cloud: rgb(56 189 248 / 0.1);
-  --cloud-soft: rgb(34 211 238 / 0.06);
-  --fg: #e4f0fb;
-  --muted: #9bb3cc;
-  --accent: #7dd3fc;
-  --accent-soft: rgb(125 211 252 / 0.14);
-  --accent-line: rgb(125 211 252 / 0.45);
-  --brand-a: #38bdf8;
-  --brand-b: #22d3ee;
-  --mark-core: #06132a;
-  --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%237dd3fc' stroke-opacity='0.05' stroke-width='1'%3E%3Crect x='18' y='18' width='28' height='28'/%3E%3Crect x='18' y='18' width='28' height='28' transform='rotate(45 32 32)'/%3E%3Cpath d='M0 32h6M58 32h6M32 0v6M32 58v6'/%3E%3C/g%3E%3C/svg%3E");
+  --bg: oklch(0.19 calc(0.05 * var(--c)) var(--hd));
+  --sky-top: oklch(0.15 calc(0.04 * var(--c)) var(--hd));
+  --sky-bottom: oklch(0.25 calc(0.08 * var(--c)) var(--hd));
+  --cloud: oklch(0.7 calc(0.14 * var(--c)) var(--h) / 0.1);
+  --cloud-soft: oklch(0.75 calc(0.12 * var(--c)) calc(var(--h) - 25) / 0.06);
+  --fg: oklch(0.95 calc(0.02 * var(--c)) var(--h));
+  --muted: oklch(0.76 calc(0.04 * var(--c)) var(--h));
+  --accent: oklch(0.83 calc(0.1 * var(--c)) var(--h));
+  --accent-soft: oklch(0.83 calc(0.1 * var(--c)) var(--h) / 0.14);
+  --accent-line: oklch(0.83 calc(0.1 * var(--c)) var(--h) / 0.45);
+  --brand-a: oklch(0.75 calc(0.14 * var(--c)) var(--h));
+  --brand-b: oklch(0.8 calc(0.13 * var(--c)) calc(var(--h) - 22));
+  --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.045' stroke-width='1'%3E%3Crect x='18' y='18' width='28' height='28'/%3E%3Crect x='18' y='18' width='28' height='28' transform='rotate(45 32 32)'/%3E%3Cpath d='M0 32h6M58 32h6M32 0v6M32 58v6'/%3E%3C/g%3E%3C/svg%3E");
   --soft: rgb(255 255 255 / 0.05);
   --hover: rgb(255 255 255 / 0.07);
   --track: rgb(255 255 255 / 0.16);
@@ -79,18 +107,15 @@
   --warn: #fcd34d;
   --extra: #d8b4fe;
 
-  --page-bg: #0b1c38;
-  --page-line: rgb(125 211 252 / 0.2);
+  --page-bg: oklch(0.23 calc(0.06 * var(--c)) var(--hd));
+  --page-line: oklch(0.83 calc(0.1 * var(--c)) var(--h) / 0.2);
   --page-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 16px 40px -14px rgb(0 0 0 / 0.65);
   --spine: rgb(0 0 0 / 0.45);
   --mask: rgb(255 255 255 / 0.11);
-  --live: rgb(125 211 252 / 0.18);
+  --live: oklch(0.83 calc(0.1 * var(--c)) var(--h) / 0.18);
 
-  --mic-a: #0ea5e9;
-  --mic-b: #0369a1;
-
-  --lg-fill: #0284c7;
-  --lg-ring: rgb(125 211 252 / 0.7);
+  --lg-fill: oklch(0.59 calc(0.14 * var(--c)) var(--h));
+  --lg-ring: oklch(0.83 calc(0.1 * var(--c)) var(--h) / 0.7);
 }
 
 /* ---------- Base ---------- */
@@ -601,6 +626,53 @@ a {
 }
 .slider-row > :nth-child(2) {
   flex: 1;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 4.6rem));
+  gap: 4px;
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 2px 4px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.swatch:hover {
+  background: var(--hover);
+}
+/* Each swatch shows its palette's own microphone gradient, from the swatch's --h and --c. */
+.swatch-dot {
+  display: grid;
+  place-items: center;
+  inline-size: 38px;
+  block-size: 38px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, oklch(0.66 calc(0.15 * var(--c)) var(--h)), oklch(0.48 calc(0.12 * var(--c)) var(--h)));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25);
+}
+.swatch[aria-checked="true"] .swatch-dot {
+  box-shadow:
+    0 0 0 2px var(--page-bg),
+    0 0 0 4px var(--accent);
+}
+.swatch-name {
+  max-inline-size: 100%;
+  overflow: hidden;
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.swatch[aria-checked="true"] .swatch-name {
+  color: var(--fg);
+  font-weight: 600;
 }
 
 .prose-card {
@@ -1292,7 +1364,7 @@ a {
   overflow: visible;
 }
 .sheet::backdrop {
-  background: rgb(3 18 40 / 0.45);
+  background: rgb(8 14 24 / 0.45);
   backdrop-filter: blur(2px);
 }
 .sheet[open] {
