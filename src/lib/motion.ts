@@ -19,18 +19,14 @@ export function viewTransitions(): boolean {
 
 let running: ViewTransition | null = null;
 
-/**
- * Makes `update` (React state changes included) as a view transition of the given kind. `from` is where
- * the page was dragged to, in pixels, so that a swiped page goes on from under the finger.
- */
-export function transition(kind: TransitionKind, update: () => void, { from = 0 } = {}): void {
+/** Makes `update` (React state changes included) as a view transition of the given kind. */
+export function transition(kind: TransitionKind, update: () => void): void {
   if (!viewTransitions() || document.visibilityState !== "visible") {
     update();
     return;
   }
   const root = document.documentElement;
   root.dataset.transition = kind;
-  root.style.setProperty("--turn-from", `${Math.round(from)}px`);
   const current = document.startViewTransition(() => flushSync(update));
   running = current;
   // A transition is skipped when another starts: nothing to report then.
@@ -39,7 +35,6 @@ export function transition(kind: TransitionKind, update: () => void, { from = 0 
     if (running !== current) return;
     running = null;
     delete root.dataset.transition;
-    root.style.removeProperty("--turn-from");
   };
   current.finished.then(done, done);
 }

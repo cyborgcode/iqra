@@ -375,19 +375,26 @@ when $w < \ell + 4$.
 
 ### Motion
 
-Changes of screen are [view transitions](https://developer.mozilla.org/docs/Web/API/View_Transition_API)
-([`src/lib/motion.ts`](src/lib/motion.ts)): a page turn slides the page out, from wherever a swipe left it, as the next
-one slides in from the other side; another view fades through; a change of theme, colour, language, numbers or text
-size crossfades. Sheets rise in and sink out. Everything is still with the system's reduced-motion setting, and
-browsers without view transitions get a simple slide for page turns.
+Pages turn as a carousel ([`src/components/pager.ts`](src/components/pager.ts)): the spreads on either side are laid
+out beside the open one (the next to the left, as in a Mushaf) and the whole row moves. A finger drags it, with the
+neighbouring page coming in; let go past a fifth of the page or with a flick and it slides on at the speed of the
+flick, otherwise it springs back, and past the first or last page it only gives a little. A trackpad swipe moves it
+the same way, a mouse wheel turns a page per flick (unless large text makes the page scroll), and keys, buttons and
+the book following a recitation turn with the same slide. Only when a slide ends does the address change: the page
+is already on the screen, so the row is put back under it in the same frame.
+
+Other changes of screen are [view transitions](https://developer.mozilla.org/docs/Web/API/View_Transition_API)
+([`src/lib/motion.ts`](src/lib/motion.ts)): a jump to another part of the book slides through, another view fades
+through, and a change of theme, colour, language, numbers or text size crossfades. Sheets rise in and sink out.
+Everything is still with the system's reduced-motion setting.
 
 The screen is frozen between the snapshot and the animation, so the work done there is kept small: only what
 changes renders again (the Mushaf page and the views are memoized, and Settings and About exist only while shown),
 the page fit above, and no glass images drawn. glisse draws each glass's rim (and in Chromium its refraction) as
 images the size of the element, so the large still panes, cards and sheets, are drawn by CSS alone in the same look
 ([`src/components/Surface.tsx`](src/components/Surface.tsx)), and the rim's inputs are the same in both themes, so a
-change of theme reuses the images already drawn. With the CPU slowed four times, a page turn starts within about
-0.2 s (0.05 s for a page seen before) and a change of view within 0.25 s.
+change of theme reuses the images already drawn. With the CPU slowed four times, a page turn starts sliding within
+about 0.05 s and a change of view within 0.25 s.
 
 ## Limitations
 

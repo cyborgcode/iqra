@@ -781,13 +781,17 @@ a {
 }
 
 .page-area {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   justify-content: center;
   padding: 8px 8px 2px;
-  /* Horizontal swipes turn pages; pinch-zoom still works. */
+  /* The pages beside the open one wait out of sight, left and right. */
+  overflow-x: clip;
+  /* Horizontal swipes turn pages; pinch-zoom still works. A trackpad's swipe is not the browser's back. */
   touch-action: pan-y pinch-zoom;
+  overscroll-behavior-x: none;
 }
 @media (min-width: 640px) {
   .page-area {
@@ -795,31 +799,21 @@ a {
   }
 }
 
+/* The row of pages (components/pager.ts): the open spread, with the next one to its left and the
+   previous one to its right, as in a Mushaf. The row moves; each spread keeps its place in it. */
+.pager {
+  position: relative;
+  flex: 1;
+  align-self: stretch;
+  min-inline-size: 0;
+}
 .page-turn {
+  position: absolute;
+  inset: 0;
   display: flex;
   justify-content: center;
-  inline-size: 100%;
-  transition: transform 0.25s ease-out;
+  transform: translateX(calc(var(--pos, 0) * (100% + 24px)));
 }
-.page-turn.turn-next {
-  animation: iqra-turn-next 0.32s ease-out;
-}
-.page-turn.turn-prev {
-  animation: iqra-turn-prev 0.32s ease-out;
-}
-@keyframes iqra-turn-next {
-  from {
-    opacity: 0;
-    transform: translateX(-28px);
-  }
-}
-@keyframes iqra-turn-prev {
-  from {
-    opacity: 0;
-    transform: translateX(28px);
-  }
-}
-
 /* A page keeps the proportions of a printed Mushaf page where the screen allows, and fills it on phones. */
 .mushaf-page {
   position: relative;
@@ -1684,7 +1678,7 @@ a {
 .app-main {
   view-transition-name: main;
 }
-.page-turn {
+.page-turn.is-current {
   view-transition-name: mushaf;
 }
 ::view-transition-group(*) {
@@ -1724,10 +1718,10 @@ a {
 }
 @keyframes iqra-slide-out-next {
   from {
-    transform: translateX(var(--turn-from, 0px));
+    transform: none;
   }
   to {
-    transform: translateX(calc(var(--turn-from, 0px) + 30%));
+    transform: translateX(30%);
   }
 }
 @keyframes iqra-slide-in-next {
@@ -1737,10 +1731,10 @@ a {
 }
 @keyframes iqra-slide-out-prev {
   from {
-    transform: translateX(var(--turn-from, 0px));
+    transform: none;
   }
   to {
-    transform: translateX(calc(var(--turn-from, 0px) - 30%));
+    transform: translateX(-30%);
   }
 }
 @keyframes iqra-slide-in-prev {
@@ -1802,8 +1796,6 @@ a {
   .spinner {
     animation-duration: 2.4s;
   }
-  .page-turn.turn-next,
-  .page-turn.turn-prev,
   .ayah-flash,
   .w-next,
   .dock > *,
@@ -1812,7 +1804,6 @@ a {
   }
   .score-fill,
   .progress-fill,
-  .page-turn,
   .mic,
   .sheet,
   .sheet::backdrop {

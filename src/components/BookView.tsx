@@ -16,7 +16,6 @@ import {
   type Summary,
 } from "../state/recitation";
 import { clearFocusAyah, currentRoute, goToAyah, goToPage, useFocusAyah } from "../state/route";
-import { viewTransitions } from "../lib/motion";
 import { useSettings } from "../state/settings";
 import { loadText, useText } from "../state/text";
 import { openSheet, useSheet } from "../state/ui";
@@ -27,6 +26,7 @@ import { ModelGate } from "./ModelGate";
 import { MushafPage, type PageView } from "./MushafPage";
 import { Sheet } from "./Sheet";
 import { SummarySheet } from "./SummarySheet";
+import { usePager } from "./pager";
 
 /** Corpus words on the given pages (consecutive), as a half-open range. */
 function pageWords(corpus: Corpus, pages: readonly number[]): [number, number] {
@@ -54,10 +54,6 @@ function useMedia(query: string): boolean {
   );
 }
 
-/** How much of a horizontal drag the page follows. */
-const DRAG_FOLLOW = 0.85;
-/** A horizontal swipe of at least this many pixels turns the page. */
-const SWIPE_PX = 64;
 
 /**
  * The Mushaf, a whole page (or two) on the screen at a time. Press the microphone anywhere: the
@@ -74,14 +70,17 @@ export function BookView({ page }: { page: number }) {
   const spread = useMedia(SPREAD_QUERY);
   const [selected, setSelected] = useState<number | null>(null);
   const pages = spread ? spreadOf(page) : [page];
-  const [shown, setShown] = useState({ first: pages[0]!, turn: "" });
-  const [drag, setDrag] = useState(0);
-  const gesture = useRef<{ id: number; x: number; y: number; dx: number; active: boolean } | null>(null);
   const area = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  // The spreads beside the open one, laid out to slide in: the next on the left, as in a Mushaf.
+  const step = spread ? 2 : 1;
+  const first = pages[0]!;
+  const slots = [
+    first + step <= PAGE_COUNT ? { pos: -1, pages: spread ? spreadOf(first + step) : [first + 1] } : null,
+    { pos: 0, pages },
+    first - step >= 1 ? { pos: 1, pages: spread ? spreadOf(first - step) : [first - 1] } : null,
+  ].filter((slot) => slot !== null);
   const corpus = text?.corpus ?? null;
-
-  // Which way the page turned, for the animation (adjusted while rendering, not in an effect).
-  if (shown.first !== pages[0]) setShown({ first: pages[0]!, turn: pages[0]! > shown.first ? "turn-next" : "turn-prev" });
 
   // The latest values, for callbacks that outlive a render (the recitation asks for the open pages).
   const latest = useRef({ corpus, spread, textSize: settings.textSize, digits: settings.digits });
@@ -93,12 +92,15 @@ export function BookView({ page }: { page: number }) {
   // the Mushaf font has loaded (until then the text is measured in a fallback font).
   // A page seen before is set at once; `fresh` measures again (once the font has loaded).
   const fit = useCallback((fresh = false) => {
-    const boxes: PageBox[] = [];
-    area.current?.querySelectorAll<HTMLElement>(".page-body").forEach((box) => {
-      const textEl = box.querySelector<HTMLElement>(".page-text");
-      if (textEl) boxes.push({ box, text: textEl });
+    // Each spread on the track (the open one and its neighbours) is sized on its own.
+    area.current?.querySelectorAll<HTMLElement>(".page-turn").forEach((slot) => {
+      const boxes: PageBox[] = [];
+      slot.querySelectorAll<HTMLElement>(".page-body").forEach((box) => {
+        const textEl = box.querySelector<HTMLElement>(".page-text");
+        if (textEl) boxes.push({ box, text: textEl });
+      });
+      fitPages(boxes, latest.current.textSize, latest.current.digits, fresh);
     });
-    fitPages(boxes, latest.current.textSize, latest.current.digits, fresh);
   }, []);
   const laidOut = useCallback(() => fit(), [fit]);
   useLayoutEffect(() => fit(), [fit, settings.textSize, settings.digits, settings.lang, spread, page]);
@@ -126,17 +128,23 @@ export function BookView({ page }: { page: number }) {
     if (sheet === "model" && model.phase === "ready") openSheet(null);
   }, [sheet, model.phase]);
 
-  /** Turns a page (two in a spread); `dragged` is how far a swipe had moved it, in pixels. */
-  const turn = useCallback((delta: 1 | -1, dragged = 0) => {
-    const route = currentRoute();
-    if (route.view !== "book") return;
-    const from = latest.current.spread ? spreadOf(route.page)[0]! : route.page;
-    const next = from + delta * (latest.current.spread ? 2 : 1);
-    if (next >= 1 && next <= PAGE_COUNT) {
+  const pager = usePager(area, track, {
+    target: (delta) => {
+      const route = currentRoute();
+      if (route.view !== "book") return null;
+      const s = latest.current.spread;
+      const next = (s ? spreadOf(route.page)[0]! : route.page) + delta * (s ? 2 : 1);
+      return next >= 1 && next <= PAGE_COUNT ? next : null;
+    },
+    commit: (to, replace) => {
       setSelected(null);
-      goToPage(next, { from: dragged });
-    }
-  }, []);
+      // The page is already on the screen: no transition.
+      goToPage(to, { replace, animate: false });
+    },
+    pageScrolls: () => !!area.current?.querySelector(".page-turn.is-current .page-body.scrolls"),
+  });
+  /** Turns a page (two in a spread), sliding. */
+  const turn = useCallback((delta: 1 | -1, replace = false) => pager.turn(delta, replace), [pager]);
 
   const previous = useCallback(() => turn(-1), [turn]);
   const next = useCallback(() => turn(1), [turn]);
@@ -175,9 +183,14 @@ export function BookView({ page }: { page: number }) {
     const p = pageOfAyah(corpus.ayahOfWord[Math.min(position, corpus.size - 1)]!);
     const route = currentRoute();
     if (route.view !== "book") return;
-    const open = latest.current.spread ? spreadOf(route.page) : [route.page];
-    if (!open.includes(p)) goToPage(p, { replace: true });
-  }, [corpus, rec.phase, position]);
+    const s = latest.current.spread;
+    const open = s ? spreadOf(route.page) : [route.page];
+    if (open.includes(p)) return;
+    // The next page slides in as when turned; a jump further goes straight there.
+    const following = s ? spreadOf(open[0]! + 2) : [open[0]! + 1];
+    if (following.includes(p)) turn(1, true);
+    else goToPage(p, { replace: true });
+  }, [corpus, rec.phase, position, turn]);
 
   // With large text the page scrolls: keep the word being recited in view.
   useEffect(() => {
@@ -246,66 +259,38 @@ export function BookView({ page }: { page: number }) {
       <div
         ref={area}
         className="page-area"
-        onPointerDown={(e) => {
-          if (e.pointerType === "mouse" || !e.isPrimary) return;
-          gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, active: false };
-        }}
-        onPointerMove={(e) => {
-          const g = gesture.current;
-          if (!g || g.id !== e.pointerId) return;
-          const dx = e.clientX - g.x;
-          const dy = e.clientY - g.y;
-          if (!g.active) {
-            if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-              g.active = true;
-              e.currentTarget.setPointerCapture(e.pointerId);
-            } else if (Math.abs(dy) > 14) {
-              gesture.current = null;
-              return;
-            }
-          }
-          if (g.active) {
-            g.dx = dx;
-            setDrag(dx * DRAG_FOLLOW);
-          }
-        }}
-        onPointerUp={() => {
-          const g = gesture.current;
-          gesture.current = null;
-          if (!g?.active) return;
-          setDrag(0);
-          // Swiping towards the right brings in the next page, which lies to the left in a Mushaf.
-          if (g.dx > SWIPE_PX) turn(1, g.dx * DRAG_FOLLOW);
-          else if (g.dx < -SWIPE_PX) turn(-1, g.dx * DRAG_FOLLOW);
-        }}
-        onPointerCancel={() => {
-          gesture.current = null;
-          setDrag(0);
-        }}
+        onPointerDown={pager.onPointerDown}
+        onPointerMove={pager.onPointerMove}
+        onPointerUp={pager.onPointerUp}
+        onPointerCancel={pager.onPointerCancel}
       >
-        <div
-          key={pages.join("-")}
-          dir="rtl"
-          // With view transitions the turn is animated by them (see motion.ts); otherwise the new page slides in.
-          className={`page-turn ${!viewTransitions() && shown.first === pages[0] ? shown.turn : ""}`}
-          style={drag ? { transform: `translateX(${drag}px)`, transition: "none" } : undefined}
-        >
-          {pages.map((p, i) => (
-            <MushafPage
-              key={p}
-              page={p}
-              corpus={corpus}
-              view={view}
-              selected={selected}
-              onSelect={setSelected}
-              focus={focus}
-              onFocused={onFocused}
-              onLaidOut={laidOut}
-              // In a spread the right page holds "previous" and the left page "next", on their outer sides.
-              onPrevious={i === 0 ? previous : undefined}
-              onNext={i === pages.length - 1 ? next : undefined}
-              credit={i === pages.length - 1}
-            />
+        <div ref={track} className="pager">
+          {slots.map((slot) => (
+            <div
+              key={slot.pages.join("-")}
+              dir="rtl"
+              className={`page-turn${slot.pos === 0 ? " is-current" : ""}`}
+              style={{ "--pos": slot.pos } as React.CSSProperties}
+              inert={slot.pos !== 0}
+            >
+              {slot.pages.map((p, i) => (
+                <MushafPage
+                  key={p}
+                  page={p}
+                  corpus={corpus}
+                  view={view}
+                  selected={slot.pos === 0 ? selected : null}
+                  onSelect={setSelected}
+                  focus={focus}
+                  onFocused={onFocused}
+                  onLaidOut={laidOut}
+                  // In a spread the right page holds "previous" and the left page "next", on their outer sides.
+                  onPrevious={i === 0 ? previous : undefined}
+                  onNext={i === slot.pages.length - 1 ? next : undefined}
+                  credit={i === slot.pages.length - 1}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </div>

@@ -71,11 +71,11 @@ function kindOf(from: Route, to: Route): TransitionKind {
 }
 
 /** Goes to a route, and shows it animated as a page turn or a change of view (unless `animate` is false). */
-function go(next: Route, { from = 0, animate = true } = {}) {
+function go(next: Route, { animate = true } = {}) {
   const kind = kindOf(route, next);
   route = next;
   rememberPage(next);
-  if (animate) transition(kind, () => set(next), { from });
+  if (animate) transition(kind, () => set(next));
   else set(next);
 }
 
@@ -94,17 +94,17 @@ export function currentRoute(): Route {
   return route;
 }
 
-/** `from`: how far the page was dragged, in pixels, when a swipe turns it. */
-export function navigate(next: Route, { replace = false, from = 0 } = {}) {
+/** `animate: false` shows the route at once (the pages' own slide already brought it on screen). */
+export function navigate(next: Route, { replace = false, animate = true } = {}) {
   const path = pathOf(next);
   if (location.pathname !== path) {
     if (replace) history.replaceState(null, "", path);
     else history.pushState(null, "", path);
   }
-  if (path !== pathOf(route)) go(next, { from });
+  if (path !== pathOf(route)) go(next, { animate });
 }
 
-export function goToPage(page: number, options?: { replace?: boolean; from?: number }) {
+export function goToPage(page: number, options?: { replace?: boolean; animate?: boolean }) {
   navigate({ view: "book", page: Math.min(PAGE_COUNT, Math.max(1, Math.round(page))) }, options);
 }
 
