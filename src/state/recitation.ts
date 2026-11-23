@@ -50,7 +50,10 @@ export interface RecitationState {
   live: LiveView | null;
   /** An ayah chosen with "recite from this ayah" (ayah index), used by the next recitation. */
   startAyah: number | null;
+  /** The summary sheet being shown, if any. */
   summary: Summary | null;
+  /** The last recitation's summary, kept after its sheet is closed. */
+  lastSummary: Summary | null;
   /** Words shown in "recite from memory": recited in this recitation, or shown as a hint. */
   revealed: ReadonlySet<number>;
   hinted: ReadonlySet<number>;
@@ -69,6 +72,7 @@ let state: RecitationState = {
   live: null,
   startAyah: null,
   summary: null,
+  lastSummary: null,
   revealed: new Set(),
   hinted: new Set(),
   version: 0,
@@ -195,6 +199,7 @@ export async function stopRecitation(): Promise<void> {
       cursor: s.tracker.cursor,
       startAyah: null,
       summary,
+      lastSummary: summary ?? state.lastSummary,
       error: summary ? null : { problem: "nothing" },
       revealed: new Set([...s.tracker.sessionWords, ...state.hinted]),
       version: state.version + 1,
@@ -259,6 +264,11 @@ export function dismissSummary() {
   set({ summary: null });
 }
 
+/** Opens the last recitation's summary again. */
+export function showLastSummary() {
+  if (state.lastSummary) set({ summary: state.lastSummary });
+}
+
 export function dismissError() {
   set({ error: null });
 }
@@ -267,7 +277,8 @@ export function dismissError() {
 export function clearMarks(from = 0, to = Number.POSITIVE_INFINITY) {
   for (const w of [...marks.words.keys()]) if (w >= from && w < to) marks.words.delete(w);
   for (const w of [...marks.extras.keys()]) if (w >= from - 1 && w < to) marks.extras.delete(w);
-  set({ version: state.version + 1, revealed: new Set(), hinted: new Set() });
+  const all = from <= 0 && to === Number.POSITIVE_INFINITY;
+  set({ version: state.version + 1, revealed: new Set(), hinted: new Set(), ...(all ? { lastSummary: null } : {}) });
 }
 
 /** "Recite from memory": shows one more word, after the last one recited (or `fallback`). */

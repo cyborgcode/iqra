@@ -143,7 +143,7 @@ const en = {
   micStart: "Start reciting",
   micStop: "Stop",
   micGetModel: "Get the speech model",
-  dockIdle: "Recite from anywhere — the Mushaf finds the ayah and follows along.",
+  dockIdle: "Press the microphone and recite from anywhere.",
   dockFrom: (ref: string) => `Recite from ${ref}`,
   dockListening: "Listening… begin whenever you’re ready",
   dockSearching: "Finding where you are…",
@@ -171,6 +171,17 @@ const en = {
   wordHidden: "hidden word",
   legendLive: "Being recited now",
   amin: "Āmīn",
+  lastResults: "Show the last results",
+  moreTitle: "More",
+  modelIntro: "iqra listens with a speech model that runs on this device. Once it is ready, press the microphone and recite from anywhere: the Mushaf finds the ayah and follows along.",
+  textSizeTitle: "Mushaf text size",
+  textFit: "Fit the page",
+  textLarge: "Large",
+  textXLarge: "Extra large",
+  textSizeNote: "“Fit the page” shows each page whole, like a printed Mushaf. Larger sizes are easier to read; the page then scrolls.",
+  creditShort: "Text: Tanzil",
+  appearanceDark: "Dark appearance",
+  appearanceLight: "Light appearance",
 };
 
 export type Strings = typeof en;
@@ -316,7 +327,7 @@ const ar: Strings = {
   micStart: "ابدأ التلاوة",
   micStop: "توقّف",
   micGetModel: "نزّل نموذج الصوت",
-  dockIdle: "اقرأ من أي موضع، وسيجد المصحف الآية ويتابعك.",
+  dockIdle: "اضغط الميكروفون واقرأ من أي موضع.",
   dockFrom: (ref) => `اقرأ ابتداءً من ${ref}`,
   dockListening: "أستمع… ابدأ متى شئت",
   dockSearching: "أبحث عن موضع تلاوتك…",
@@ -344,6 +355,17 @@ const ar: Strings = {
   wordHidden: "كلمة مخفية",
   legendLive: "تُقرأ الآن",
   amin: "آمين",
+  lastResults: "اعرض آخر نتيجة",
+  moreTitle: "المزيد",
+  modelIntro: "يستمع «اقرأ» بنموذج صوتي يعمل على جهازك. بعد تجهيزه اضغط الميكروفون واقرأ من أي موضع، فيجد المصحف الآية ويتابعك.",
+  textSizeTitle: "حجم خط المصحف",
+  textFit: "ملء الصفحة",
+  textLarge: "كبير",
+  textXLarge: "كبير جدًا",
+  textSizeNote: "«ملء الصفحة» يعرض كل صفحة كاملة كالمصحف المطبوع. الأحجام الأكبر أسهل قراءةً، وعندها تُمرَّر الصفحة.",
+  creditShort: "النص: تنزيل",
+  appearanceDark: "المظهر الداكن",
+  appearanceLight: "المظهر الفاتح",
 };
 
 export const STRINGS: Record<Lang, Strings> = { en, ar };

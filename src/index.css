@@ -617,55 +617,50 @@ a {
 }
 
 
-/* ---------- Header: where you are in the Mushaf ---------- */
+/* ---------- The book: a whole page on the screen ---------- */
 
-.page-info {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: 55%;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--soft);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.page-info:hover {
-  background: var(--hover);
-}
-.page-info-surah {
-  font-weight: 650;
-  white-space: nowrap;
+.app.view-book {
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-.page-info-meta {
-  font-size: 0.8rem;
-  color: var(--muted);
-  white-space: nowrap;
+.view-book .app-main {
+  max-width: none;
+  height: 100%;
+  padding: 0;
 }
-@media (max-width: 420px) {
-  .page-info-meta {
-    display: none;
-  }
-}
-
-/* ---------- The book ---------- */
-
-.view-book .app-footer {
-  padding-bottom: calc(230px + env(safe-area-inset-bottom));
+.book-host {
+  height: 100%;
 }
 
 .book {
-  padding-bottom: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
 }
 
-.page-stage {
-  touch-action: pan-y;
+.page-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  padding: 8px 8px 2px;
+  /* Horizontal swipes turn pages; pinch-zoom still works. */
+  touch-action: pan-y pinch-zoom;
+}
+@media (min-width: 640px) {
+  .page-area {
+    padding: 14px 18px 4px;
+  }
+}
+
+.page-turn {
+  display: flex;
+  justify-content: center;
+  inline-size: 100%;
   transition: transform 0.25s ease-out;
 }
-
 .page-turn.turn-next {
   animation: iqra-turn-next 0.32s ease-out;
 }
@@ -685,83 +680,180 @@ a {
   }
 }
 
+/* A page keeps the proportions of a printed Mushaf page where the screen allows, and fills it on phones. */
 .mushaf-page {
   position: relative;
-  padding: 14px 16px 12px;
-  border-radius: 22px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  aspect-ratio: 7 / 10;
+  max-inline-size: 100%;
+  padding: 8px 12px 2px;
+  border-radius: 18px;
   background: var(--page-bg);
   box-shadow: var(--page-shadow);
   outline: 1px solid var(--page-line);
-  outline-offset: -7px;
+  outline-offset: -5px;
 }
 @media (min-width: 640px) {
   .mushaf-page {
-    padding: 20px 32px 16px;
+    padding: 12px 26px 4px;
   }
 }
+.book-spread .mushaf-page {
+  max-inline-size: 50%;
+}
+/* The spine: the right page's left edge meets the left page's right edge. */
+.book-spread .mushaf-page:first-child {
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+}
+.book-spread .mushaf-page:last-child:not(:first-child) {
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  box-shadow: var(--page-shadow), inset -10px 0 14px -12px rgb(60 40 10 / 0.35);
+}
 
-.page-head,
-.page-foot {
+.page-head {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 0.8rem;
-  color: var(--muted);
-  padding-inline: 4px;
-}
-.page-head {
-  padding-bottom: 6px;
+  gap: 8px;
+  padding: 0 2px 3px;
   border-bottom: 1px solid var(--page-line);
+  font-size: 0.78rem;
+  color: var(--muted);
 }
-.page-head-surah {
+.page-surah {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
-  font-weight: 600;
-  white-space: nowrap;
+  padding: 3px 6px;
+  border-radius: 8px;
+  color: var(--fg);
+  font-weight: 650;
+  cursor: pointer;
+}
+.page-surah:hover {
+  background: var(--hover);
+}
+.page-surah-name {
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
-.page-head-juz {
+.page-surah-chevron {
+  flex: none;
+  opacity: 0.6;
+  transform: rotate(-90deg);
+}
+.page-juz {
   flex: none;
   white-space: nowrap;
 }
-.page-foot {
+
+/* The box the text is fitted to (see components/fit.ts). Short pages are centred in it. */
+.page-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  padding-top: 6px;
-  border-top: 1px solid var(--page-line);
+  overflow: hidden;
 }
-.page-number {
-  font-family: var(--font-quran);
-  font-size: 1.05rem;
-  color: var(--accent);
+.page-body.scrolls {
+  justify-content: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: 6px;
+}
+
+.page-text {
+  flex: none;
+  font-size: 20px;
+  line-height: 2.05;
+  text-align: justify;
+  text-align-last: right;
+  word-spacing: 0.02em;
 }
 
 .page-loading {
   display: grid;
   place-items: center;
-  min-block-size: 50vh;
+  flex: 1;
 }
 
-.page-text {
-  padding-block: 6px;
-  line-height: 2.35;
+.page-foot {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 30px;
+  border-top: 1px solid var(--page-line);
+}
+.page-turns {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-turn-btn {
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 999px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.page-turn-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.page-turn-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.page-number {
+  min-inline-size: 2.2em;
+  text-align: center;
+  font-family: var(--font-quran);
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+.page-credit {
+  position: absolute;
+  inset-inline-start: 4px;
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.page-credit:hover {
+  text-decoration: underline;
+}
+.mirror {
+  transform: scaleX(-1);
 }
 
+/* Surah heading and basmala: sized in em, so they scale with the fitted text. */
 .surah-heading {
   display: block;
-  margin-block: 0.5em 0.15em;
+  margin-block: 0.12em 0.02em;
   text-align: center;
   text-align-last: center;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 .surah-frame {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.3em 1em 0.35em;
+  margin-inline: 0.3em;
+  padding: 0.1em 1em 0.15em;
   border: 1.5px solid var(--accent-line);
-  border-radius: 14px;
+  border-radius: 0.5em;
   background:
     linear-gradient(90deg, var(--accent-soft), transparent 30%, transparent 70%, var(--accent-soft)),
     var(--page-bg);
@@ -771,17 +863,17 @@ a {
   content: "";
   position: absolute;
   top: 50%;
-  inline-size: 0.55em;
-  block-size: 0.55em;
+  inline-size: 0.5em;
+  block-size: 0.5em;
   border: 1.5px solid var(--accent-line);
   background: var(--page-bg);
   transform: translateY(-50%) rotate(45deg);
 }
 .surah-frame::before {
-  inset-inline-start: -0.32em;
+  inset-inline-start: -0.3em;
 }
 .surah-frame::after {
-  inset-inline-end: -0.32em;
+  inset-inline-end: -0.3em;
 }
 .surah-frame-name {
   font-size: 0.95em;
@@ -789,17 +881,16 @@ a {
 }
 .surah-frame-en {
   font-family: var(--font-sans);
-  font-size: 0.38em;
+  font-size: 0.36em;
+  line-height: 1.3;
   color: var(--muted);
-  line-height: 1.4;
 }
 .basmala {
   display: block;
-  margin-top: 0.25em;
 }
 
 .ayah {
-  border-radius: 10px;
+  border-radius: 0.3em;
   transition: background 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
@@ -818,26 +909,97 @@ a {
   }
 }
 
+.hizb-mark {
+  color: var(--brand-b);
+}
+
+.mark-glue {
+  white-space: nowrap;
+}
+
+/* The end-of-ayah ornament with its number (drawn by the font from U+06DD and the digits). */
 .ayah-end {
-  display: inline-grid;
-  place-items: center;
-  min-inline-size: 1.7em;
-  block-size: 1.7em;
-  padding-inline: 0.28em;
-  margin-inline: 0.1em;
-  border-radius: 999px;
-  border: 1.5px solid var(--accent-line);
-  box-shadow: inset 0 0 0 2px var(--page-bg), inset 0 0 0 3px var(--accent-soft);
+  display: inline;
+  padding: 0 0.04em;
+  border-radius: 0.35em;
   color: var(--accent);
-  font-family: var(--font-quran);
-  font-size: 0.6em;
-  line-height: 1;
-  vertical-align: middle;
   cursor: pointer;
 }
 .ayah-end:hover,
 .ayah-end[aria-pressed="true"] {
   background: var(--accent-soft);
+}
+
+/* Marks never change the layout: badges and added-word pins are drawn over the text. */
+.page-text .w-wrong {
+  position: relative;
+}
+.page-text .w-badge {
+  position: absolute;
+  top: 0.05em;
+  inset-inline-end: -0.18em;
+  inline-size: 0.42em;
+  block-size: 0.42em;
+  margin: 0;
+}
+.page-text .w-missed {
+  outline-offset: 0.08em;
+}
+
+.extra-anchor {
+  position: relative;
+  display: inline-block;
+  inline-size: 0;
+  block-size: 1em;
+  vertical-align: top;
+}
+.extra-pin {
+  position: absolute;
+  top: -0.05em;
+  left: -0.3em;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  inline-size: 0.6em;
+  block-size: 0.6em;
+  padding: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--extra);
+  background: var(--page-bg);
+  color: var(--extra);
+  cursor: pointer;
+}
+.extra-pin svg {
+  inline-size: 80%;
+  block-size: 80%;
+}
+.extra-pin.extra-repeated {
+  border-style: dashed;
+}
+.extra-bubble {
+  position: absolute;
+  bottom: calc(100% + 0.1em);
+  left: 0;
+  z-index: 5;
+  display: none;
+  padding: 0.25em 0.7em;
+  border-radius: 0.6em;
+  background: var(--fg);
+  color: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 0.5em;
+  line-height: 1.7;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.extra-bubble s {
+  font-family: var(--font-quran);
+  font-size: 1.35em;
+}
+.extra-anchor:hover .extra-bubble,
+.extra-pin:focus-visible + .extra-bubble,
+.extra-pin:focus + .extra-bubble {
+  display: block;
 }
 
 /* Words being recited right now (provisional), and the next word expected. */
@@ -864,7 +1026,7 @@ a {
   }
 }
 
-/* "Recite from memory": a hidden word keeps its place as a soft slab. */
+/* "Recite from memory": a hidden word keeps its place as a soft band. */
 .w-masked {
   color: transparent;
   background-image: linear-gradient(var(--mask), var(--mask));
@@ -887,52 +1049,94 @@ a {
   text-decoration-color: var(--brand-b);
 }
 
-/* ---------- Dock ---------- */
+/* ---------- Dock: one compact row ---------- */
 
-.dock-wrap {
-  position: fixed;
-  inset-inline: 0;
-  bottom: calc(max(env(safe-area-inset-bottom), 14px) + 74px);
-  z-index: 45;
+.dock-area {
+  position: relative;
+  flex: none;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding-inline: 12px;
-  pointer-events: none;
-}
-.app:has(.tabbar-wrap) .dock-wrap {
-  bottom: calc(max(env(safe-area-inset-bottom), 14px) + 74px);
-}
-.app:not(:has(.tabbar-wrap)) .dock-wrap {
-  bottom: max(env(safe-area-inset-bottom), 14px);
-}
-.view-settings .dock-wrap,
-.view-about .dock-wrap {
-  display: none;
-}
-.dock-wrap > * {
-  pointer-events: auto;
+  justify-content: center;
+  padding: 6px 10px max(env(safe-area-inset-bottom), 8px);
 }
 
 .dock {
-  inline-size: min(100%, 30rem);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px 10px;
-  border-radius: 28px;
+  inline-size: min(100%, 23rem);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  justify-items: center;
+  padding: 4px 6px;
+  border-radius: 999px;
+}
+.dock .is-on {
+  color: var(--brand-b);
 }
 .dock-status {
+  grid-column: span 2;
+  justify-self: stretch;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-block-size: 1.5em;
-  padding-inline: 6px;
-  font-size: 0.86rem;
+  gap: 1px;
+  min-width: 0;
+  padding-inline: 4px;
+  font-size: 0.74rem;
+  line-height: 1.25;
   text-align: center;
-  color: var(--muted);
+  color: var(--fg);
+}
+.dock-from {
+  flex-direction: row;
+  gap: 2px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.dock-status-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.dock-slot {
+  inline-size: 44px;
+  block-size: 44px;
+}
+.dock-score {
+  font-size: 0.78rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: var(--ok);
+}
+
+/* Messages float just above the dock, over the bottom edge of the page. */
+.dock-float {
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(100% + 10px);
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  padding: 0 12px 2px;
+  pointer-events: none;
+}
+.dock-float > * {
+  pointer-events: auto;
+}
+.dock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-inline-size: min(100%, 26rem);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--page-bg) 90%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.14);
+  outline: 1px solid var(--page-line);
+  font-size: 0.82rem;
+  color: var(--fg);
 }
 .dock-error {
   color: var(--bad);
@@ -942,8 +1146,8 @@ a {
   flex: none;
   display: grid;
   place-items: center;
-  inline-size: 26px;
-  block-size: 26px;
+  inline-size: 24px;
+  block-size: 24px;
   border-radius: 999px;
   cursor: pointer;
 }
@@ -951,41 +1155,27 @@ a {
   background: var(--hover);
 }
 .dock-time {
-  padding: 1px 8px;
+  padding: 0 7px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--bad) 14%, transparent);
   color: var(--bad);
-  font-weight: 600;
-}
-.dock-note {
-  font-size: 0.78rem;
-  text-align: center;
-  color: var(--muted);
-}
-.dock-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-}
-.dock-row .is-on {
-  color: var(--brand-b);
-}
-.mirror {
-  transform: scaleX(-1);
+  font-weight: 650;
 }
 
+/* The microphone sits a little above the bar. */
 .mic {
   --level: 0;
   flex: none;
   display: grid;
   place-items: center;
-  inline-size: 64px;
-  block-size: 64px;
+  inline-size: 58px;
+  block-size: 58px;
+  margin-block: -12px -2px;
   border-radius: 999px;
   color: #fff;
   background: linear-gradient(145deg, var(--brand-a), color-mix(in srgb, var(--brand-a) 55%, var(--brand-b)));
   box-shadow:
+    0 0 0 4px var(--bg),
     0 6px 18px -6px color-mix(in srgb, var(--brand-a) 70%, transparent),
     inset 0 1px 0 rgb(255 255 255 / 0.35);
   cursor: pointer;
@@ -1007,17 +1197,15 @@ a {
 .mic-on {
   background: linear-gradient(145deg, #dc2626, #b91c1c);
   box-shadow:
-    0 0 0 calc(3px + var(--level) * 14px) rgb(220 38 38 / 0.22),
+    0 0 0 4px var(--bg),
+    0 0 0 calc(5px + var(--level) * 14px) rgb(220 38 38 / 0.24),
     0 6px 18px -6px rgb(185 28 28 / 0.7);
 }
 .mic-progress {
-  box-shadow:
-    0 0 0 3px var(--page-bg),
-    0 0 0 6px var(--track);
+  border: 5px solid transparent;
   background:
     linear-gradient(145deg, var(--brand-a), color-mix(in srgb, var(--brand-a) 55%, var(--brand-b))) padding-box,
     conic-gradient(var(--brand-b) calc(var(--progress) * 1turn), var(--track) 0) border-box;
-  border: 5px solid transparent;
 }
 .mic-spinner {
   inline-size: 24px;
@@ -1027,15 +1215,15 @@ a {
 }
 
 .ayah-bar {
-  inline-size: min(100%, 30rem);
+  inline-size: min(100%, 26rem);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px 8px 14px;
-  border-radius: 24px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
 }
 [dir="rtl"] .ayah-bar {
-  padding: 8px 14px 8px 8px;
+  padding: 6px 14px 6px 6px;
 }
 .ayah-bar-label {
   flex: 1;
@@ -1200,6 +1388,41 @@ a {
   padding-inline: 4px;
 }
 
+.action-list {
+  display: grid;
+  gap: 2px;
+}
+.action-row {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+.action-row:hover:not(:disabled) {
+  background: var(--hover);
+}
+.action-row:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.action-row > svg {
+  flex: none;
+  color: var(--accent);
+}
+.action-destructive,
+.action-destructive > svg {
+  color: var(--bad);
+}
+.action-meta {
+  margin-inline-start: auto;
+  font-weight: 650;
+  color: var(--ok);
+}
+
 .review-list {
   display: grid;
   gap: 4px;
@@ -1257,7 +1480,7 @@ a {
   }
   .score-fill,
   .progress-fill,
-  .page-stage,
+  .page-turn,
   .mic {
     transition: none;
   }

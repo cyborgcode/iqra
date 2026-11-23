@@ -14,6 +14,7 @@ import {
   pageOfAyah,
   quarterOfAyah,
   quarterStart,
+  quarterStartingAt,
   sajdaOfAyah,
   surahsOnPage,
 } from "./book";
@@ -77,6 +78,10 @@ describe("book divisions from Tanzil's metadata", () => {
     expect(juzOfAyah(ayahIndex(2, 142))).toBe(2);
     expect(juzOfAyah(AYAH_COUNT - 1)).toBe(30);
     expect(quarterOfAyah(0)).toBe(1);
+    expect(quarterStartingAt(0)).toBe(1);
+    expect(quarterStartingAt(ayahIndex(2, 142))).toBe(9);
+    expect(quarterStartingAt(ayahIndex(2, 143))).toBeNull();
+    expect(Array.from({ length: AYAH_COUNT }, (_, i) => quarterStartingAt(i)).filter(Boolean)).toHaveLength(240);
     expect(quarterStart(240)).toEqual({ surah: 100, ayah: 9 });
     // Every juz starts a hizb: two hizbs (eight quarters) per juz.
     for (let j = 1; j <= JUZ_COUNT; j++) expect(quarterStart((j - 1) * 8 + 1)).toEqual(juzStart(j));

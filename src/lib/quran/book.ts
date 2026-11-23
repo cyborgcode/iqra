@@ -81,6 +81,13 @@ export function quarterOfAyah(index: number): number {
   return lastAtOrBefore(QUARTER_FIRST, index) + 1;
 }
 
+const QUARTER_OF_FIRST_AYAH = new Map(QUARTER_FIRST.map((ayah, i) => [ayah, i + 1]));
+
+/** The hizb quarter (1…240) that begins with this ayah, or null if none does. */
+export function quarterStartingAt(index: number): number | null {
+  return QUARTER_OF_FIRST_AYAH.get(index) ?? null;
+}
+
 export function quarterStart(quarter: number): AyahRef {
   return ayahRef(QUARTER_FIRST[quarter - 1]!);
 }

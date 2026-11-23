@@ -1,12 +1,8 @@
 import { Menu } from "glisse";
 import { Tabs } from "./Directional";
-import { juzOfAyah, pageAyahs, surahsOnPage } from "../lib/quran/book";
 import { bookRoute, navigate, type Route } from "../state/route";
-import { useRecitation } from "../state/recitation";
 import { useSettings } from "../state/settings";
-import { openSheet } from "../state/ui";
-import { BookIcon, DeviceIcon, GearIcon, GlobeIcon, InfoIcon, ListIcon, MoonIcon, StarMark, SunIcon } from "./icons";
-import { num, surahName } from "./labels";
+import { BookIcon, DeviceIcon, GearIcon, GlobeIcon, InfoIcon, MoonIcon, StarMark, SunIcon } from "./icons";
 
 function go(e: React.MouseEvent, route: Route) {
   e.preventDefault();
@@ -14,7 +10,7 @@ function go(e: React.MouseEvent, route: Route) {
   window.scrollTo({ top: 0 });
 }
 
-export function Header({ page }: { page: number | null }) {
+export function Header() {
   const { t, settings, update } = useSettings();
   return (
     <header className="app-header">
@@ -27,15 +23,6 @@ export function Header({ page }: { page: number | null }) {
           iqra
         </span>
       </a>
-      {page !== null && (
-        <button type="button" className="page-info" onClick={() => openSheet("index")} aria-label={`${t.contents} · ${t.pageN(num(page, settings.lang))}`}>
-          <ListIcon size={18} />
-          <span className="page-info-surah">{surahName(surahsOnPage(page)[0]!, settings.lang)}</span>
-          <span className="page-info-meta">
-            {t.juzN(num(juzOfAyah(pageAyahs(page)[0]), settings.lang))} · {t.pageN(num(page, settings.lang))}
-          </span>
-        </button>
-      )}
       <Menu
         aria-label={t.menuLabel}
         align="end"
@@ -75,9 +62,6 @@ export function Footer() {
 
 export function NavBar({ view }: { view: Route["view"] }) {
   const { t } = useSettings();
-  const { phase } = useRecitation();
-  // While listening, the microphone controls have the bottom of the screen to themselves.
-  if (view === "book" && phase !== "idle") return null;
   return (
     <nav className="tabbar-wrap" aria-label="iqra">
       <Tabs

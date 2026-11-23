@@ -58,6 +58,23 @@ export function SettingsView() {
       </Glass>
 
       <Glass className="card setting">
+        <h2 className="setting-title" id="set-text-size">
+          {t.textSizeTitle}
+        </h2>
+        <Segmented
+          aria-labelledby="set-text-size"
+          items={[
+            { value: "fit", label: t.textFit },
+            { value: "large", label: t.textLarge },
+            { value: "xlarge", label: t.textXLarge },
+          ]}
+          value={settings.textSize}
+          onValueChange={(v) => update({ textSize: v === "large" || v === "xlarge" ? v : "fit" })}
+        />
+        <p className="text-muted text-sm">{t.textSizeNote}</p>
+      </Glass>
+
+      <Glass className="card setting">
         <h2 className="setting-title" id="set-model">
           {t.setModel}
         </h2>

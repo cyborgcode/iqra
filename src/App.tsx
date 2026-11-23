@@ -10,16 +10,18 @@ export default function App() {
   const route = useRoute();
   const book = route.view === "book" ? route : bookRoute();
   const page = book.view === "book" ? book.page : 1;
+  const onBook = route.view === "book";
 
   return (
     <div className={`app view-${route.view}`}>
       <a href="#main" className="skip-link">
         {t.skipToContent}
       </a>
-      <Header page={route.view === "book" ? page : null} />
+      {/* The Mushaf has the whole screen; the other views get the usual header, footer and tabs. */}
+      {!onBook && <Header />}
       {/* Views stay mounted so a recitation in progress survives a visit to Settings. */}
       <main id="main" className="app-main" tabIndex={-1}>
-        <div hidden={route.view !== "book"}>
+        <div hidden={!onBook} className="book-host">
           <BookView page={page} />
         </div>
         <div hidden={route.view !== "settings"}>
@@ -29,8 +31,8 @@ export default function App() {
           <AboutView />
         </div>
       </main>
-      <Footer />
-      <NavBar view={route.view} />
+      {!onBook && <Footer />}
+      {!onBook && <NavBar view={route.view} />}
     </div>
   );
 }

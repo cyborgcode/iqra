@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /** Which sheet (dialog) is open. Several parts of the screen can open the same sheet. */
-export type SheetName = "index" | "model" | null;
+export type SheetName = "index" | "model" | "more" | null;
 
 let sheet: SheetName = null;
 const listeners = new Set<() => void>();

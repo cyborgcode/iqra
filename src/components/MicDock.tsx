@@ -1,25 +1,22 @@
-import { useEffect, useRef, useState } from "react";
-import { Button, Glass, Menu } from "glisse";
-import { PAGE_COUNT } from "../lib/quran/book";
-import { formatDuration } from "../lib/format";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Button, Glass } from "glisse";
+import { formatDuration, formatPercent } from "../lib/format";
 import { useModelStatus, type ModelStatus } from "../state/model";
-import { dismissError, onLevel, useRecitation, type RecitationState } from "../state/recitation";
+import { dismissError, onLevel, showLastSummary, useRecitation, type RecitationState } from "../state/recitation";
+import { navigate } from "../state/route";
 import { useSettings } from "../state/settings";
 import { useText } from "../state/text";
-import { openSheet } from "../state/ui";
-import { ChevronIcon, CrossIcon, DownloadIcon, EyeIcon, EyeOffIcon, ListIcon, MicIcon, SparkIcon, StopIcon, TrashIcon } from "./icons";
+import { openSheet, useSheet } from "../state/ui";
+import { CrossIcon, DownloadIcon, EyeIcon, EyeOffIcon, GearIcon, GlobeIcon, InfoIcon, ListIcon, MicIcon, MoonIcon, MoreIcon, SparkIcon, StopIcon, SunIcon, TargetIcon, TrashIcon } from "./icons";
+import { Sheet } from "./Sheet";
 import { ayahLabel, problemMessage } from "./labels";
 
 interface Props {
-  page: number;
   selected: number | null;
   onSelect: (ayah: number | null) => void;
   onStart: (fromAyah?: number) => void;
   onStop: () => void;
-  onTurn: (delta: 1 | -1) => void;
   onHint: () => void;
-  onClearPage: () => void;
-  onClearAll: () => void;
 }
 
 function useStatus(rec: RecitationState, textReady: boolean): string {
@@ -40,9 +37,13 @@ function useStatus(rec: RecitationState, textReady: boolean): string {
   }
 }
 
-/** The floating controls: page turning, contents, the microphone, and "recite from memory". */
+/**
+ * One compact row at the bottom of the book: contents, "recite from memory", the microphone, the next
+ * word (when reciting from memory) or the last results, and everything else in a menu. It never covers
+ * the page: only an error floats above it.
+ */
 export function MicDock(props: Props) {
-  const { page, selected, onSelect, onStart, onStop, onTurn, onHint, onClearPage, onClearAll } = props;
+  const { selected, onSelect, onStart, onStop, onHint } = props;
   const { t, settings, update } = useSettings();
   const rec = useRecitation();
   const model = useModelStatus();
@@ -50,58 +51,74 @@ export function MicDock(props: Props) {
   const status = useStatus(rec, text !== null);
   const busy = rec.phase !== "idle";
   const listening = rec.phase === "listening";
+  const last = rec.lastSummary;
+
+  // The left of the dock follows what is going on: where the reciter is while reciting, the chosen
+  // ayah when one is selected, otherwise contents and "recite from memory".
+  let left: ReactNode;
+  if (busy) {
+    left = (
+      <p className="dock-status" aria-live="polite">
+        {listening && <Elapsed since={rec.startedAt} />}
+        <span className="dock-status-text">{status}</span>
+      </p>
+    );
+  } else if (selected !== null) {
+    left = (
+      <p className="dock-status dock-from">
+        <span className="dock-status-text">{t.dockFrom(ayahLabel(selected, settings.lang))}</span>
+        <button type="button" className="dock-dismiss" aria-label={t.close} onClick={() => onSelect(null)}>
+          <CrossIcon size={14} />
+        </button>
+      </p>
+    );
+  } else {
+    left = (
+      <>
+        <Button aria-label={t.contents} title={t.contents} icon={<ListIcon size={20} />} onClick={() => openSheet("index")} />
+        <Button
+          aria-label={t.fromMemory}
+          title={t.fromMemory}
+          aria-pressed={settings.memorize}
+          className={settings.memorize ? "is-on" : undefined}
+          icon={settings.memorize ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+          onClick={() => update({ memorize: !settings.memorize })}
+        />
+      </>
+    );
+  }
 
   return (
-    <div className="dock-wrap">
-      {selected !== null && !busy && (
-        <Glass className="ayah-bar" role="group" aria-label={ayahLabel(selected, settings.lang)}>
-          <span className="ayah-bar-label">{ayahLabel(selected, settings.lang)}</span>
-          <Button variant="filled" icon={<MicIcon size={18} />} onClick={() => onStart(selected)}>
-            {t.reciteFromHere}
-          </Button>
-          <Button aria-label={t.close} icon={<CrossIcon size={18} />} onClick={() => onSelect(null)} />
-        </Glass>
-      )}
-
-      <Glass className="dock">
-        {rec.error ? (
-          <p className="dock-status dock-error" role="alert">
+    <div className="dock-area">
+      {/* Only problems float above the dock; everything else stays in it, off the page. */}
+      <div className="dock-float" role="alert">
+        {rec.error && (
+          <p className="dock-pill dock-error">
             <span>{rec.error.problem === "model" ? `${t.modelFailed} ${rec.error.detail ?? ""}` : problemMessage(rec.error.problem, t)}</span>
             <button type="button" className="dock-dismiss" aria-label={t.close} onClick={dismissError}>
               <CrossIcon size={16} />
             </button>
           </p>
-        ) : (
-          <p className="dock-status" role="status" aria-live="polite">
-            {listening && <Elapsed since={rec.startedAt} />}
-            <span>{status}</span>
-          </p>
         )}
-
-        {/* Pages turn like a Mushaf: the next page is on the left, in every interface language. */}
-        <div className="dock-row" dir="rtl">
-          <Button aria-label={t.previousPage} icon={<ChevronIcon size={20} className="mirror" />} disabled={page <= 1} onClick={() => onTurn(-1)} />
-          <Button aria-label={t.contents} icon={<ListIcon size={20} />} onClick={() => openSheet("index")} />
-          <MicButton phase={rec.phase} model={model} onStart={() => (model.phase === "ready" ? onStart() : openSheet("model"))} onStop={onStop} />
-          <Button
-            aria-label={t.fromMemory}
-            aria-pressed={settings.memorize}
-            className={settings.memorize ? "is-on" : undefined}
-            icon={settings.memorize ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
-            onClick={() => update({ memorize: !settings.memorize })}
-          />
-          <Button aria-label={t.nextPage} icon={<ChevronIcon size={20} />} disabled={page >= PAGE_COUNT} onClick={() => onTurn(1)} />
-          <Menu
-            aria-label={t.moreActions}
-            align="start"
-            items={[
-              ...(settings.memorize ? [{ label: t.nextWord, icon: <SparkIcon size={18} />, onSelect: onHint }, "separator" as const] : []),
-              { label: t.clearPage, icon: <TrashIcon size={18} />, onSelect: onClearPage, disabled: busy },
-              { label: t.clearAll, icon: <TrashIcon size={18} />, onSelect: onClearAll, destructive: true, disabled: busy },
-            ]}
-          />
-        </div>
-        {settings.memorize && !busy && <p className="dock-note">{t.fromMemoryHint}</p>}
+      </div>
+      <Glass className="dock">
+        {left}
+        <MicButton
+          phase={rec.phase}
+          model={model}
+          onStart={() => (model.phase === "ready" ? onStart(selected ?? undefined) : openSheet("model"))}
+          onStop={onStop}
+        />
+        {settings.memorize ? (
+          <Button aria-label={t.nextWord} title={t.nextWord} icon={<SparkIcon size={20} />} disabled={!text} onClick={onHint} />
+        ) : last ? (
+          <Button aria-label={`${t.lastResults}: ${formatPercent(last.accuracy, settings.lang)}`} title={t.lastResults} onClick={showLastSummary}>
+            <span className="dock-score">{formatPercent(last.accuracy, settings.lang)}</span>
+          </Button>
+        ) : (
+          <span className="dock-slot" aria-hidden="true" />
+        )}
+        <Button aria-label={t.moreActions} title={t.moreActions} icon={<MoreIcon size={20} />} onClick={() => openSheet("more")} />
       </Glass>
     </div>
   );
@@ -172,5 +189,68 @@ function MicButton(props: { phase: RecitationState["phase"]; model: ModelStatus;
         <MicIcon size={28} />
       )}
     </button>
+  );
+}
+
+interface MoreProps {
+  busy: boolean;
+  onClearPage: () => void;
+  onClearAll: () => void;
+}
+
+/** Everything that does not need a place on the dock, in a sheet that rises from it. */
+export function MoreSheet({ busy, onClearPage, onClearAll }: MoreProps) {
+  const { t, settings, update, resolvedTheme } = useSettings();
+  const { lastSummary } = useRecitation();
+  const open = useSheet() === "more";
+  const close = () => openSheet(null);
+  const run = (action: () => void) => () => {
+    close();
+    action();
+  };
+  const dark = resolvedTheme === "dark";
+  return (
+    <Sheet open={open} onClose={close} title={t.moreTitle} className="more-sheet">
+      <ul className="action-list">
+        {lastSummary && (
+          <li>
+            <button type="button" className="action-row" onClick={run(showLastSummary)}>
+              <TargetIcon size={20} /> {t.lastResults}
+              <span className="action-meta">{formatPercent(lastSummary.accuracy, settings.lang)}</span>
+            </button>
+          </li>
+        )}
+        <li>
+          <button type="button" className="action-row" onClick={run(() => navigate({ view: "settings" }))}>
+            <GearIcon size={20} /> {t.tabSettings}
+          </button>
+        </li>
+        <li>
+          <button type="button" className="action-row" onClick={run(() => navigate({ view: "about" }))}>
+            <InfoIcon size={20} /> {t.menuAbout}
+          </button>
+        </li>
+        <li>
+          <button type="button" className="action-row" onClick={run(() => update({ lang: settings.lang === "ar" ? "en" : "ar" }))}>
+            <GlobeIcon size={20} /> <span lang={settings.lang === "ar" ? "en" : "ar"}>{t.menuLanguage}</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" className="action-row" onClick={run(() => update({ theme: dark ? "light" : "dark" }))}>
+            {dark ? <SunIcon size={20} /> : <MoonIcon size={20} />} {dark ? t.appearanceLight : t.appearanceDark}
+          </button>
+        </li>
+        <li>
+          <button type="button" className="action-row" disabled={busy} onClick={run(onClearPage)}>
+            <TrashIcon size={20} /> {t.clearPage}
+          </button>
+        </li>
+        <li>
+          <button type="button" className="action-row action-destructive" disabled={busy} onClick={run(onClearAll)}>
+            <TrashIcon size={20} /> {t.clearAll}
+          </button>
+        </li>
+      </ul>
+    </Sheet>
   );
 }

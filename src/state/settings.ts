@@ -14,7 +14,11 @@ export interface Settings {
   threshold: number;
   /** Start new recitations with the text hidden. */
   memorize: boolean;
+  /** "fit": each Mushaf page is sized to fit the screen; larger sizes scroll when needed. */
+  textSize: TextSize;
 }
+
+export type TextSize = "fit" | "large" | "xlarge";
 
 /** Read by the inline script in index.html too, so the theme and language apply before first paint. */
 export const SETTINGS_KEY = "iqra.settings";
@@ -22,7 +26,7 @@ export const SETTINGS_KEY = "iqra.settings";
 export const DEFAULT_THRESHOLD = 0.7;
 
 export function defaultSettings(): Settings {
-  return { lang: defaultLang(), theme: "system", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false };
+  return { lang: defaultLang(), theme: "system", model: "standard", engine: "auto", threshold: DEFAULT_THRESHOLD, memorize: false, textSize: "fit" };
 }
 
 export function loadSettings(): Settings {
@@ -36,6 +40,7 @@ export function loadSettings(): Settings {
       engine: saved.engine === "wasm" ? "wasm" : "auto",
       threshold: typeof saved.threshold === "number" && saved.threshold >= 0.5 && saved.threshold <= 0.95 ? saved.threshold : base.threshold,
       memorize: saved.memorize === true,
+      textSize: saved.textSize === "large" || saved.textSize === "xlarge" ? saved.textSize : "fit",
     };
   } catch {
     return base;
