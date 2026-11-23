@@ -1260,16 +1260,6 @@ a {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
-.dock-slot {
-  inline-size: 44px;
-  block-size: 44px;
-}
-.dock-score {
-  font-size: 0.78rem;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-  color: var(--ok);
-}
 
 /* Messages float just above the dock, over the bottom edge of the page. */
 .dock-float {

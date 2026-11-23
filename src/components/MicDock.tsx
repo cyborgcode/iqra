@@ -40,8 +40,8 @@ function useStatus(rec: RecitationState, textReady: boolean): string {
 
 /**
  * One compact row at the bottom of the book: contents, "recite from memory", the microphone, the next
- * word (when reciting from memory) or the last results, and everything else in a menu. It never covers
- * the page: only an error floats above it.
+ * word (it works only while reciting from memory), and everything else in a menu. It never covers the
+ * page: only an error floats above it.
  */
 export function MicDock(props: Props) {
   const { selected, onSelect, onStart, onStop, onHint } = props;
@@ -52,7 +52,6 @@ export function MicDock(props: Props) {
   const status = useStatus(rec, text !== null);
   const busy = rec.phase !== "idle";
   const listening = rec.phase === "listening";
-  const last = rec.lastSummary;
 
   // The left of the dock follows what is going on: where the reciter is while reciting, the chosen
   // ayah when one is selected, otherwise contents and "recite from memory".
@@ -110,15 +109,14 @@ export function MicDock(props: Props) {
           onStart={() => (model.phase === "ready" ? onStart(selected ?? undefined) : openSheet("model"))}
           onStop={onStop}
         />
-        {settings.memorize ? (
-          <Button aria-label={t.nextWord} title={t.nextWord} icon={<HintIcon size={20} />} disabled={!text} onClick={onHint} />
-        ) : last ? (
-          <Button aria-label={`${t.lastResults}: ${formatPercent(last.accuracy, settings.lang)}`} title={t.lastResults} onClick={showLastSummary}>
-            <span className="dock-score">{formatPercent(last.accuracy, settings.lang)}</span>
-          </Button>
-        ) : (
-          <span className="dock-slot" aria-hidden="true" />
-        )}
+        {/* The hint stays in its place, and works only while reciting from memory (the last results are in the More sheet). */}
+        <Button
+          aria-label={t.nextWord}
+          title={settings.memorize ? t.nextWord : t.nextWordOff}
+          icon={<HintIcon size={20} />}
+          disabled={!settings.memorize || !text}
+          onClick={onHint}
+        />
         <Button aria-label={t.moreActions} title={t.moreActions} icon={<MoreIcon size={20} />} onClick={() => openSheet("more")} />
       </Glass>
     </div>
