@@ -194,11 +194,11 @@ export const EyeOffIcon = (p: IconProps) => (
   </Icon>
 );
 
-/** A lit bulb: a hint (in reciting from memory, the next word shown). */
+/** A light bulb: a hint (in reciting from memory, the next word shown). */
 export const HintIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M8.5 14.5A6.1 6.1 0 1 1 15.5 14.5C14.7 15.2 14.3 16.1 14.3 17.3H9.7C9.7 16.1 9.3 15.2 8.5 14.5Z" />
-    <path d="M9.9 20.1h4.2M12 1.2v.9M4.1 4.3l.7.6M19.9 4.3l-.7.6" />
+    <path d="M9.9 20.1h4.2" />
   </Icon>
 );
 
