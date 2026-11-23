@@ -8,7 +8,8 @@ added.
 - **The whole book, a page at a time.** All 604 pages of the Madani Mushaf, with surah headings, ayah ornaments,
   hizb-quarter signs, and juz and hizb divisions from Tanzil's metadata. Each page fills the screen like a printed
   page, with nothing to scroll; wide screens show two pages side by side, as an open Mushaf. Contents by surah, juz,
-  hizb quarter, page number or `surah:ayah`; swipe, arrow keys or the page footer to turn pages.
+  hizb quarter, page number or `surah:ayah`; swipe, arrow keys or the page footer to turn pages. Ayah and page
+  numbers are written 1 2 3 by default, or ١ ٢ ٣ (Settings → Numbers).
 - **Start anywhere, follow along.** The first words you recite are looked up in all 77,433 words of the Quran. From
   then on the book follows you, turning pages as you go, with words lighting up while you recite them.
 - **Recite from memory.** Hide the words; each one appears as you recite it. Press and hold an ayah to peek, or ask
@@ -115,6 +116,10 @@ Mushaf's 15 lines fill the page (9 lines on the two opening pages, which print s
 then opened up, $\lambda \in [\lambda_0, 2.75]$, until $h(f^*, \lambda) = H$: line height moves only the height, not
 the line breaks, so it is found by interpolation. Pages shown side by side share one font size. Marks never change
 the layout (badges and added-word pins are drawn over the text), so a page keeps its size while it is recited.
+
+The end-of-ayah ornament is drawn by the Mushaf font from the sign U+06DD followed by the number. The font only
+encloses Arabic-Indic digits, so for 1 2 3 its empty sign (always 1.28 em wide) is drawn and the number, in the
+font's own Latin digits, is centred on it.
 
 Across all 604 pages this gives 18–21 px text on a 390 × 844 phone, 14–17 px on a 360 × 640 one and about 28 px on
 a tablet, with nothing to scroll. Where a page would need text smaller than 14 px (a phone held sideways), it
