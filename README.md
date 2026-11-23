@@ -136,17 +136,17 @@ A service worker ([`src/sw.js`](src/sw.js)) keeps the site's own files on the de
    book is never far behind.
 4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: the encoder on WebGPU when the
    device has a real GPU adapter, everything else on multithreaded WebAssembly; if the graphics processor fails,
-   it carries on with WebAssembly. Every request costs at least one pass of the encoder over a whole 30 s window,
-   which on a phone's processor alone takes about a second, on its graphics processor a fraction of that. The
-   recording is looked at four times a second, and a phrase is sent to the model as soon as you pause after it,
-   without waiting for the next one (a phrase too short to stand alone waits for a longer pause, as it would be
-   joined to the next). Each phrase is first brought to a steady loudness (Whisper's input depends on it; a quiet
-   phrase is raised by up to 30 dB). While you are reciting and the model has nothing finished to do, it also
-   transcribes the phrase so far, so the words you are saying light up provisionally; not in a pause, where the
-   phrase is about to be finished. A request may produce at most 45 tokens per second of audio: fully vowelled
-   text takes 5 to 7 tokens a word (measured with the model's tokenizer), so a fast reciter needs about 20, and
-   the limit only stops a model repeating itself from holding up the phrases after it. If the model fails,
-   the recitation stops with the reason. Settings shows the engine in use and how long the last phrase took.
+   it carries on with WebAssembly. The recording is looked at four times a second, and a phrase is sent to the
+   model as soon as you pause after it, without waiting for the next one (a phrase too short to stand alone waits
+   for a longer pause, as it would be joined to the next). Each phrase is first brought to a steady loudness
+   (Whisper's input depends on it; a quiet phrase is raised by up to 30 dB). While you are reciting and the model
+   has nothing finished to do, it also transcribes the phrase so far, so the words you are saying light up
+   provisionally; not in a pause, where the phrase is about to be finished. Each request is made as short as it
+   can be: a window of the phrase's own length rather than 30 s, and a phrase transcribed again as it grows starts
+   from its last text (below). A request may produce at most 45 tokens per second of audio: fully vowelled text
+   takes 5 to 7 tokens a word (measured with the model's tokenizer), so a fast reciter needs about 20. If the
+   model fails, the recitation stops with the reason. Settings shows the engine in use and how long the last
+   phrase took.
 5. **Find and follow.** Each finished segment is placed in the Quran (below) and its words are marked correct,
    different (wrong) or missed, plus any added words. Marks stay on the book until you clear them; the summary
    lists the ayahs to look at again and can start you on them.
@@ -193,6 +193,37 @@ Measured on real recitations (EveryAyah recordings, used only for testing):
 - **One segment per pause** transcribed every ayah of Al-Fatiha and scored 96.4–96.8 % on the long ayahs.
 - **Recording ayah by ayah** would not avoid splitting: 12 of Husary's recordings of Al-Baqarah 1–30 are longer than
   30 s on their own (2:282 is 260 s), and tapping between ayahs interrupts recitation from memory.
+
+### Keeping up on a phone's processor
+
+Whisper's encoder takes 30 s of audio, padded with silence, whatever the length of the phrase, and its cost grows
+with that window: about a second on a phone's processor alone. Decoding then goes token by token, one run of the
+decoder each (about 10 ms in WebAssembly), and a live phrase is transcribed again each time it grows. Three
+changes make a request cost about what its new audio does:
+
+- **A window of the phrase's length.** The exported encoder adds a fixed table of 1500 position embeddings (30 s)
+  to its input and declares that length fixed. When a model is loaded, the worker rewrites the graph once, in the
+  browser's cache, so that the table is sliced to the input's length; the weights are copied as they are, and on
+  30 s it computes exactly what it did ([`src/lib/asr/encoder-window.ts`](src/lib/asr/encoder-window.ts)). A
+  phrase of $t$ seconds then gets a window of $\lceil t + 6 \rceil$ s, at most 30. The silence matters: with less
+  of it the model often fails to see where the phrase ends and repeats it. On 161 EveryAyah ayahs (6.1 s on
+  average), with the loop guard below, 154, 158, 155 and 157 transcripts were identical to the 30 s ones with
+  2, 3, 4 and 6 s of silence, but the guard had to cut 24, 15, 9 and 4 loops.
+- **A loop guard** ([`src/lib/asr/loops.ts`](src/lib/asr/loops.ts)). A run of 12 tokens (about two words) seen a
+  second time ends decoding there. A finished phrase that came back looped is transcribed again in the full 30 s
+  window, where a repeat is the reciter's (some ayahs read the same as the one before, 94:5–6); a provisional one
+  keeps what came before the loop, as it is replaced anyway.
+- **Drafts** ([`src/lib/asr/decode.ts`](src/lib/asr/decode.ts)). A phrase transcribed again starts from the tokens
+  $d_1 \dots d_n$ of its last transcription. One run of the decoder over the prompt and the draft gives the
+  model's greedy choice $c_i$ after every prefix; the draft is kept up to the first $i$ where $c_i \ne d_i$, and
+  decoding goes on from there with the keys and values that run computed. Where the model agrees, its tokens are
+  the ones token-by-token decoding would have produced (on 160 phrases transcribed at 40, 60, 80 and 100 % of
+  their length, 150 texts were identical; the other ten differ in one word, most often the last, cut off mid-way).
+
+Measured in Chromium on WebAssembly (4 threads) with Al-Fatiha recited at its normal speed and at 1.6×: a request
+for up to 4 s of audio took 1.0–1.9 s before (median 1.3 s) and 0.25–0.7 s now (median 0.4 s); one for 8–9 s of
+audio 1.8–2.5 s before and 0.5–0.7 s now. Each ayah is marked 1–2.7 s sooner after the reciter finishes it, and the
+words being recited light up almost twice as often.
 
 ### Mistake detection
 
@@ -367,7 +398,7 @@ src/lib/arabic/          normalization and word similarity
 src/lib/quran/           pages, juz and hizb; the whole text as one word sequence; ayah references
 src/lib/recitation/      alignment, locating, following, optional phrases, live transcription
 src/lib/audio/           recorder (AudioWorklet), pause segmentation
-src/lib/asr/             page-side client for the speech worker
+src/lib/asr/             page-side client for the speech worker; decoding, loop guard, encoder window
 src/worker/              the speech-recognition Web Worker
 src/state/               settings, the current page, the recitation in progress
 src/components/          React UI (glisse components)

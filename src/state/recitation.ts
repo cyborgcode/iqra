@@ -153,8 +153,8 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
     const s: Session = { tracker, live: null!, handle: null, timer: null, hint, limitReached: false, firstAyah: state.startAyah, texts: [] };
     // A request the model cannot answer ends the recitation with the reason, rather than leaving the
     // book waiting for words that never come.
-    const recognize = (segment: Float32Array) =>
-      asr.transcribe([segment]).then(
+    const recognize = (segment: Float32Array, partial: boolean) =>
+      asr.transcribe([segment], { partial }).then(
         (texts) => texts[0] ?? "",
         (error: unknown) => {
           recognitionFailed(s, error);

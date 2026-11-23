@@ -118,8 +118,11 @@ class AsrClient {
     });
   }
 
-  /** Transcribes each segment (16 kHz mono) and returns one text per segment. */
-  transcribe(segments: Float32Array[], onSegment?: (done: number, total: number) => void): Promise<string[]> {
+  /**
+   * Transcribes each segment (16 kHz mono) and returns one text per segment. `partial`: the segment is
+   * a phrase still being recited, whose text is provisional.
+   */
+  transcribe(segments: Float32Array[], { partial = false, onSegment }: { partial?: boolean; onSegment?: (done: number, total: number) => void } = {}): Promise<string[]> {
     const id = this.nextId++;
     // Each segment gets its own buffer so it can be transferred without copying the whole recording.
     const owned = segments.map((s) => s.slice());
@@ -138,7 +141,7 @@ class AsrClient {
         }
       };
       this.listeners.add(listener);
-      this.send({ type: "transcribe", id, segments: owned }, owned.map((s) => s.buffer));
+      this.send({ type: "transcribe", id, segments: owned, partial }, owned.map((s) => s.buffer));
     });
   }
 

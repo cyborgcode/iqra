@@ -6,7 +6,8 @@ export type EnginePreference = "auto" | "wasm";
 /** Messages from the page to the speech-recognition worker. */
 export type WorkerRequest =
   | { type: "load"; model: ModelId; origin: string; engine: EnginePreference }
-  | { type: "transcribe"; id: number; segments: Float32Array[] };
+  /** `partial`: a phrase still being recited, transcribed provisionally. */
+  | { type: "transcribe"; id: number; segments: Float32Array[]; partial?: boolean };
 
 export type Backend = "webgpu" | "wasm";
 

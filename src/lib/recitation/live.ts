@@ -42,14 +42,15 @@ export class LiveTranscriber {
   private finished = false;
 
   constructor(
-    private readonly transcribe: (segment: Float32Array) => Promise<string>,
+    /** `partial`: the phrase is still being recited (its text is provisional). */
+    private readonly transcribe: (segment: Float32Array, partial: boolean) => Promise<string>,
     private readonly options: LiveOptions = {},
   ) {}
 
   private send(segment: Float32Array) {
     const index = this.parts.length;
     this.inFlight++;
-    const part = this.transcribe(segment);
+    const part = this.transcribe(segment, false);
     const done = () => {
       this.settled++;
       this.inFlight--;
@@ -68,7 +69,7 @@ export class LiveTranscriber {
     this.inFlight++;
     this.partialIndex = index;
     this.partialLength = segment.length;
-    this.transcribe(segment).then(
+    this.transcribe(segment, true).then(
       (text) => {
         this.inFlight--;
         // Stale once that segment (or a later one) is final.
