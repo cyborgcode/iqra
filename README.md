@@ -127,13 +127,17 @@ A service worker ([`src/sw.js`](src/sw.js)) keeps the site's own files on the de
    JSON file per surah, and is sized to the screen (below). In the background the remaining surah files are fetched
    and indexed for searching.
 2. **Record.** `getUserMedia` feeds an AudioWorklet that resamples to 16 kHz mono Float32 as it records, after two
-   low-pass filters to prevent aliasing. Denied permission, a missing or busy microphone and unsupported browsers
-   get clear messages.
+   low-pass filters to prevent aliasing. The voice is taken as it is, at the microphone's own sample rate, without
+   the echo cancelling, noise suppression or gain control phones apply for calls (gain control turns the room up
+   in every pause). Denied permission, a missing or busy microphone and unsupported browsers get clear messages.
 3. **Split at pauses.** Whisper hears at most 30 s at a time, and these Quran models were trained on one ayah per
    clip. The recording is cut at every pause of at least 0.35 s, so each segment is about one ayah or phrase;
-   segments longer than 24 s (a long ayah with no pause) are cut at their quietest point.
-4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: the encoder on WebGPU when the device
-   has a real GPU adapter, everything else on multithreaded WebAssembly. Each finished segment is transcribed as
+   while following, a segment longer than 15 s (a long ayah with no pause) is cut at its quietest point, so the
+   book is never far behind.
+4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: in Chromium browsers the encoder on
+   WebGPU when the device has a real GPU adapter, and everything else (all of it in Safari, on iPhone and in
+   Firefox) on multithreaded WebAssembly. The model makes one run on a second of silence while it loads, so the
+   first phrase is not slowed by setting it up. Each finished segment is transcribed as
    soon as you start the next one. While the model has nothing finished to do, it also transcribes the phrase you
    are still reciting, about every second or two, so the words you are saying light up provisionally. Finished
    segments always go first.

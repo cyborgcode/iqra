@@ -1,4 +1,5 @@
 import { MODELS, RUNTIME, fileUrl, modelBytes, type ModelId } from "../../config/models";
+import { hasWebGPU } from "./gpu";
 import type { Backend, EnginePreference, WorkerRequest, WorkerResponse } from "./protocol";
 
 const CACHE_NAME = "transformers-cache";
@@ -15,19 +16,9 @@ export interface ReadyInfo {
 
 let gpuCheck: Promise<boolean> | null = null;
 
-type Adapter = { info?: { isFallbackAdapter?: boolean }; isFallbackAdapter?: boolean };
-
-/** Whether this browser offers a real (non-fallback) WebGPU adapter. */
+/** Whether the model may use the graphics processor here (see gpu.ts). */
 export function webgpuAvailable(): Promise<boolean> {
-  gpuCheck ??= (async () => {
-    try {
-      const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
-      const adapter = (gpu ? await gpu.requestAdapter() : null) as Adapter | null;
-      return !!adapter && !(adapter.info?.isFallbackAdapter ?? adapter.isFallbackAdapter ?? false);
-    } catch {
-      return false;
-    }
-  })();
+  gpuCheck ??= hasWebGPU();
   return gpuCheck;
 }
 

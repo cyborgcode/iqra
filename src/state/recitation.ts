@@ -63,6 +63,11 @@ export interface RecitationState {
 
 const MAX_SECONDS = 15 * 60;
 const UPDATE_MS = 400;
+/**
+ * The longest phrase sent to the model while following: where a reciter leaves no pause, the book is
+ * never more than this behind, and the model is not handed several ayahs at once.
+ */
+const MAX_PHRASE_SECONDS = 15;
 
 let state: RecitationState = {
   phase: "idle",
@@ -146,6 +151,7 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
     if (state.startAyah !== null) tracker.startAt(text.corpus.ayahStart[state.startAyah]!);
     const s: Session = { tracker, live: null!, handle: null, timer: null, hint, limitReached: false, firstAyah: state.startAyah, texts: [] };
     s.live = new LiveTranscriber((segment) => asr.transcribe([segment]).then((texts) => texts[0] ?? ""), {
+      maxSegmentSeconds: MAX_PHRASE_SECONDS,
       onFinal: (_, transcript) => {
         s.texts.push(transcript);
         afterEvent(s, tracker.commit(transcript, s.hint()));

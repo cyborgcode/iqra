@@ -11,6 +11,7 @@ import {
   env,
 } from "@huggingface/transformers";
 import { MODELS, RUNTIME, type ModelConfig, type ModelId } from "../config/models";
+import { hasWebGPU } from "../lib/asr/gpu";
 import type { Backend, EnginePreference, WorkerRequest, WorkerResponse } from "../lib/asr/protocol";
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -29,19 +30,6 @@ let current: { id: ModelId; pipe: AutomaticSpeechRecognitionPipeline; backend: B
 let loading: Promise<void> | null = null;
 /** Transcriptions run one at a time, in the order they were requested. */
 let queue: Promise<void> = Promise.resolve();
-
-type Adapter = { info?: { isFallbackAdapter?: boolean }; isFallbackAdapter?: boolean };
-
-/** True for a real GPU adapter. Software ("fallback") adapters are much slower than WebAssembly. */
-async function hasWebGPU(): Promise<boolean> {
-  try {
-    const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
-    const adapter = (gpu ? await gpu.requestAdapter() : null) as Adapter | null;
-    return !!adapter && !(adapter.info?.isFallbackAdapter ?? adapter.isFallbackAdapter ?? false);
-  } catch {
-    return false;
-  }
-}
 
 /** Downloads one file into the shared cache with progress, unless it is already there. */
 async function prefetch(url: string, onBytes: (n: number) => void): Promise<void> {
@@ -154,6 +142,12 @@ async function load(id: ModelId, origin: string, engine: EnginePreference): Prom
   }
   for (const f of model.files) perFile.set(f.path, f.bytes);
   report(true);
+
+  // A first run is slower (memory to set up, and on the graphics processor its programs to compile):
+  // do it now, on a second of silence, rather than on the reciter's first phrase.
+  await pipe(new Float32Array(16000), { language: "arabic", task: "transcribe", max_new_tokens: 2 } as Parameters<typeof pipe>[1]).catch(
+    (error: unknown) => console.warn("Warm-up run failed", error),
+  );
 
   current = { id, pipe, backend };
   post({ type: "ready", model: id, backend, threads: env.backends.onnx.wasm?.numThreads ?? 1 });

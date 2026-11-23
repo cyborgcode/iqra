@@ -71,14 +71,25 @@ export async function startRecording(options: RecorderOptions = {}): Promise<Rec
 
   let stream: MediaStream;
   try {
+    // The voice as it is: no echo cancelling, noise suppression or gain control, which phones apply for
+    // calls. Gain control turns the room up in every pause and the voice down when it rises; Whisper
+    // needs neither, and the pauses that cut the recitation into phrases are clearer without it.
     stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: true },
+      audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
     });
   } catch (error) {
     throw new RecorderError(classify(error), error);
   }
 
-  const context = new AudioContext();
+  // At the microphone's own rate, so the browser does not resample it first (Safari and Firefox have
+  // done so poorly, or refused); the worklet brings it to 16 kHz.
+  const micRate = stream.getAudioTracks()[0]?.getSettings().sampleRate;
+  let context: AudioContext;
+  try {
+    context = micRate ? new AudioContext({ sampleRate: micRate }) : new AudioContext();
+  } catch {
+    context = new AudioContext();
+  }
   const release = () => {
     stream.getTracks().forEach((track) => track.stop());
     void context.close().catch(() => {});
