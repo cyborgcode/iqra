@@ -1,6 +1,6 @@
-import { Glass } from "glisse";
 import { MODELS } from "../config/models";
 import { useSettings } from "../state/settings";
+import { Surface } from "./Surface";
 
 function External({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -16,7 +16,7 @@ export function AboutView() {
     <div className="flex flex-col gap-5">
       <h1 className="page-title">{t.aboutTitle}</h1>
 
-      <Glass className="card prose-card">
+      <Surface className="card prose-card">
         <p>{t.aboutIntro}</p>
         <h2>{t.aboutPrivacyTitle}</h2>
         <p>{t.aboutPrivacy}</p>
@@ -25,9 +25,9 @@ export function AboutView() {
         <h2>{t.aboutLimitsTitle}</h2>
         <p>{t.aboutLimits}</p>
         <p className="disclaimer">{t.disclaimer}</p>
-      </Glass>
+      </Surface>
 
-      <Glass className="card prose-card" id="licenses">
+      <Surface className="card prose-card" id="licenses">
         <h2>{t.creditsTitle}</h2>
 
         <h3>{t.creditTanzilTitle}</h3>
@@ -86,7 +86,7 @@ export function AboutView() {
             {t.readLicense}
           </a>
         </p>
-      </Glass>
+      </Surface>
     </div>
   );
 }

@@ -54,7 +54,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.dataset.theme = resolvedTheme;
     root.dataset.palette = settings.palette;
-    applyBrandColors();
+    // The favicon and browser colour can follow once the screen has changed: not during its transition.
+    const id = setTimeout(applyBrandColors, 400);
+    return () => clearTimeout(id);
   }, [resolvedTheme, settings.palette]);
 
   const value = useMemo(() => ({ settings, update, t: stringsFor(settings.lang), resolvedTheme }), [settings, update, resolvedTheme]);

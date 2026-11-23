@@ -149,11 +149,19 @@ box of height $H$ and the base line height $\lambda_0 = 2.05$ em, the font size 
 
 $$f^* = \max\Big\{\, f \le \frac{H}{15\,\lambda_0} \;:\; h(f, \lambda_0) \le H \Big\}$$
 
-where $h$ is the height the browser lays the page out at (found by bisection), capped at the size where the Madani
-Mushaf's 15 lines fill the page (9 lines on the two opening pages, which print sets larger). The line height is
+where $h$ is the height the browser lays the page out at, capped at the size where the Madani Mushaf's 15 lines fill
+the page (9 lines on the two opening pages, which print sets larger). The line height is
 then opened up, $\lambda \in [\lambda_0, 2.75]$, until $h(f^*, \lambda) = H$: line height moves only the height, not
 the line breaks, so it is found by interpolation. Pages shown side by side share one font size. Marks never change
 the layout (badges and added-word pins are drawn over the text), so a page keeps its size while it is recited.
+
+Each trial size is a full layout of the page's Arabic text, the costly part of turning a page, so the search for
+$f^*$ (to a tenth of a pixel) takes few: it starts from the size of the page fitted before, as neighbouring pages are
+set alike, and since wrapped text grows with the square of its size, aims each next trial where the height meets
+the box, $f' = f\sqrt{H/h(f)}$ (between the two sizes measured on either side once there are both), halving the
+interval instead whenever two trials in a row fall on the same side, as they do where a line breaks differently and
+$h$ jumps. A page takes about five layouts instead of fourteen, the page box is laid out on its own (CSS
+containment), and a page fitted before, in the same box and settings, is set at once.
 
 The end-of-ayah ornament is drawn by the Mushaf font from the sign U+06DD followed by the number. The font only
 encloses Arabic-Indic digits, so for 1 2 3 its empty sign (always 1.28 em wide) is drawn and the number, in the
@@ -372,6 +380,14 @@ Changes of screen are [view transitions](https://developer.mozilla.org/docs/Web/
 one slides in from the other side; another view fades through; a change of theme, colour, language, numbers or text
 size crossfades. Sheets rise in and sink out. Everything is still with the system's reduced-motion setting, and
 browsers without view transitions get a simple slide for page turns.
+
+The screen is frozen between the snapshot and the animation, so the work done there is kept small: only what
+changes renders again (the Mushaf page and the views are memoized, and Settings and About exist only while shown),
+the page fit above, and no glass images drawn. glisse draws each glass's rim (and in Chromium its refraction) as
+images the size of the element, so the large still panes, cards and sheets, are drawn by CSS alone in the same look
+([`src/components/Surface.tsx`](src/components/Surface.tsx)), and the rim's inputs are the same in both themes, so a
+change of theme reuses the images already drawn. With the CPU slowed four times, a page turn starts within about
+0.2 s (0.05 s for a page seen before) and a change of view within 0.25 s.
 
 ## Limitations
 

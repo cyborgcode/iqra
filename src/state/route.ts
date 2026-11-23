@@ -29,8 +29,11 @@ export function pathOf(route: Route): string {
   return route.view === "book" ? `/page/${route.page}` : `/${route.view}`;
 }
 
+/** Where the reader is, or is going: changes at once, so a quick second page turn starts from it. */
 let route: Route = parseRoute(location.pathname);
 if (location.pathname !== pathOf(route)) history.replaceState(null, "", pathOf(route) + location.hash);
+/** What is on the screen: follows `route` when the screen changes (within its transition). */
+let shown: Route = route;
 
 /** An ayah to bring into view (and briefly highlight) once its page is shown. */
 let focusAyah: number | null = null;
@@ -44,15 +47,20 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-function set(next: Route) {
-  route = next;
-  if (next.view === "book") {
-    try {
-      localStorage.setItem(LAST_PAGE_KEY, String(next.page));
-    } catch {
-      // Storage unavailable: the Mushaf will just open on page 1 next time.
-    }
+/** Keeps the page open, so the Mushaf opens there again (and other views return to it). */
+function rememberPage(r: Route) {
+  if (r.view !== "book") return;
+  try {
+    localStorage.setItem(LAST_PAGE_KEY, String(r.page));
+  } catch {
+    // Storage unavailable: the Mushaf will just open on page 1 next time.
   }
+}
+
+rememberPage(route);
+
+function set(next: Route) {
+  shown = next;
   emit();
 }
 
@@ -62,20 +70,24 @@ function kindOf(from: Route, to: Route): TransitionKind {
   return "view";
 }
 
-/** Shows a route, animated as a page turn or a change of view. */
-function show(next: Route, from = 0) {
-  transition(kindOf(route, next), () => set(next), { from });
+/** Goes to a route, and shows it animated as a page turn or a change of view (unless `animate` is false). */
+function go(next: Route, { from = 0, animate = true } = {}) {
+  const kind = kindOf(route, next);
+  route = next;
+  rememberPage(next);
+  if (animate) transition(kind, () => set(next), { from });
+  else set(next);
 }
 
 addEventListener("popstate", (event) => {
-  const next = parseRoute(location.pathname);
   // After a browser's own back or forward animation (a swipe on iOS, for one), no second animation.
-  if ((event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition) set(next);
-  else show(next);
+  const animate = !(event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition;
+  go(parseRoute(location.pathname), { animate });
 });
 
+/** The route on the screen. */
 export function useRoute(): Route {
-  return useSyncExternalStore(subscribe, () => route);
+  return useSyncExternalStore(subscribe, () => shown);
 }
 
 export function currentRoute(): Route {
@@ -89,7 +101,7 @@ export function navigate(next: Route, { replace = false, from = 0 } = {}) {
     if (replace) history.replaceState(null, "", path);
     else history.pushState(null, "", path);
   }
-  if (path !== pathOf(route)) show(next, from);
+  if (path !== pathOf(route)) go(next, { from });
 }
 
 export function goToPage(page: number, options?: { replace?: boolean; from?: number }) {

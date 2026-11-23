@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Button, Glass } from "glisse";
+import { Button } from "glisse";
 import { RangeSlider, Segmented, Toggle } from "./Directional";
 import { MODELS, RUNTIME, modelBytes } from "../config/models";
 import { PALETTES } from "../lib/palettes";
@@ -8,6 +8,7 @@ import { formatMegabytes, formatPercent } from "../lib/format";
 import { resetModel, useModelStatus } from "../state/model";
 import { DEFAULT_THRESHOLD, useSettings } from "../state/settings";
 import { CheckIcon, TrashIcon } from "./icons";
+import { Surface } from "./Surface";
 
 export function SettingsView() {
   const { t, settings, update } = useSettings();
@@ -27,7 +28,7 @@ export function SettingsView() {
     <div className="flex flex-col gap-5">
       <h1 className="page-title">{t.settingsTitle}</h1>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <h2 className="setting-title" id="set-lang">
           {t.setLanguage}
         </h2>
@@ -52,9 +53,9 @@ export function SettingsView() {
           value={settings.digits}
           onValueChange={(v) => update({ digits: v === "indic" ? "indic" : "western" })}
         />
-      </Glass>
+      </Surface>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <h2 className="setting-title" id="set-theme">
           {t.setTheme}
         </h2>
@@ -73,9 +74,9 @@ export function SettingsView() {
           {t.setColor}
         </h2>
         <PalettePicker />
-      </Glass>
+      </Surface>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <h2 className="setting-title" id="set-text-size">
           {t.textSizeTitle}
         </h2>
@@ -90,9 +91,9 @@ export function SettingsView() {
           onValueChange={(v) => update({ textSize: v === "large" || v === "xlarge" ? v : "fit" })}
         />
         <p className="text-muted text-sm">{t.textSizeNote}</p>
-      </Glass>
+      </Surface>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <h2 className="setting-title" id="set-model">
           {t.setModel}
         </h2>
@@ -108,9 +109,9 @@ export function SettingsView() {
         <p className="text-muted text-sm">
           {settings.model === "accurate" ? t.modelAccurateNote(size("accurate")) : t.modelStandardNote(size("standard"))}
         </p>
-      </Glass>
+      </Surface>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <h2 className="setting-title" id="set-strict">
           {t.setStrictness}
         </h2>
@@ -133,17 +134,17 @@ export function SettingsView() {
             <Button onClick={() => update({ threshold: DEFAULT_THRESHOLD })}>{t.resetDefault(formatPercent(DEFAULT_THRESHOLD, settings.lang))}</Button>
           </div>
         )}
-      </Glass>
+      </Surface>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <label className="switch-row justify-between">
           <span className="setting-title">{t.fromMemory}</span>
           <Toggle checked={settings.memorize} onCheckedChange={(memorize) => update({ memorize })} aria-label={t.fromMemory} />
         </label>
         <p className="text-muted text-sm">{t.fromMemoryHint}</p>
-      </Glass>
+      </Surface>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <h2 className="setting-title" id="set-engine">
           {t.setEngine}
         </h2>
@@ -160,9 +161,9 @@ export function SettingsView() {
         {model.phase === "ready" && (
           <p className="text-sm">{t.engineInUse(model.backend === "webgpu" ? "WebGPU" : "WebAssembly", model.threads)}</p>
         )}
-      </Glass>
+      </Surface>
 
-      <Glass className="card setting">
+      <Surface className="card setting">
         <h2 className="setting-title">{t.setStorage}</h2>
         <p className="text-muted text-sm">{t.storageNote}</p>
         <div className="flex items-center gap-3">
@@ -183,7 +184,7 @@ export function SettingsView() {
             </span>
           )}
         </div>
-      </Glass>
+      </Surface>
     </div>
   );
 }

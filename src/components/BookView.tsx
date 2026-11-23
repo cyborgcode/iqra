@@ -84,28 +84,30 @@ export function BookView({ page }: { page: number }) {
   if (shown.first !== pages[0]) setShown({ first: pages[0]!, turn: pages[0]! > shown.first ? "turn-next" : "turn-prev" });
 
   // The latest values, for callbacks that outlive a render (the recitation asks for the open pages).
-  const latest = useRef({ corpus, spread, textSize: settings.textSize });
+  const latest = useRef({ corpus, spread, textSize: settings.textSize, digits: settings.digits });
   useLayoutEffect(() => {
-    latest.current = { corpus, spread, textSize: settings.textSize };
+    latest.current = { corpus, spread, textSize: settings.textSize, digits: settings.digits };
   });
 
   // Size the open page(s) to the screen: when they are laid out, when the screen changes, and once
   // the Mushaf font has loaded (until then the text is measured in a fallback font).
-  const fit = useCallback(() => {
+  // A page seen before is set at once; `fresh` measures again (once the font has loaded).
+  const fit = useCallback((fresh = false) => {
     const boxes: PageBox[] = [];
     area.current?.querySelectorAll<HTMLElement>(".page-body").forEach((box) => {
       const textEl = box.querySelector<HTMLElement>(".page-text");
       if (textEl) boxes.push({ box, text: textEl });
     });
-    fitPages(boxes, latest.current.textSize);
+    fitPages(boxes, latest.current.textSize, latest.current.digits, fresh);
   }, []);
-  useLayoutEffect(fit, [fit, settings.textSize, settings.lang, spread, page]);
+  const laidOut = useCallback(() => fit(), [fit]);
+  useLayoutEffect(() => fit(), [fit, settings.textSize, settings.digits, settings.lang, spread, page]);
   useEffect(() => {
     const el = area.current;
     if (!el) return;
     const observer = new ResizeObserver(() => fit());
     observer.observe(el);
-    void document.fonts?.ready.then(() => fit());
+    void document.fonts?.ready.then(() => fit(true));
     return () => observer.disconnect();
   }, [fit]);
 
@@ -135,6 +137,9 @@ export function BookView({ page }: { page: number }) {
       goToPage(next, { from: dragged });
     }
   }, []);
+
+  const previous = useCallback(() => turn(-1), [turn]);
+  const next = useCallback(() => turn(1), [turn]);
 
   const start = useCallback(
     (fromAyah?: number) => {
@@ -295,10 +300,10 @@ export function BookView({ page }: { page: number }) {
               onSelect={setSelected}
               focus={focus}
               onFocused={onFocused}
-              onLaidOut={fit}
+              onLaidOut={laidOut}
               // In a spread the right page holds "previous" and the left page "next", on their outer sides.
-              onPrevious={i === 0 ? () => turn(-1) : undefined}
-              onNext={i === pages.length - 1 ? () => turn(1) : undefined}
+              onPrevious={i === 0 ? previous : undefined}
+              onNext={i === pages.length - 1 ? next : undefined}
               credit={i === pages.length - 1}
             />
           ))}

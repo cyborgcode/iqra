@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SURAHS } from "../data/surahs";
 import { STRINGS } from "../i18n";
 import { PAGE_COUNT, ayahRef, juzOfAyah, pageAyahs, quarterOfAyah, quarterStartingAt, surahsOnPage } from "../lib/quran/book";
@@ -105,7 +105,7 @@ interface Props {
  * into tokens that join back to the original ayah, and marks are attached to words by position.
  * Nothing a mark adds changes the layout, so a page sized to the screen stays that size.
  */
-export function MushafPage(props: Props) {
+function MushafPageView(props: Props) {
   const { page, corpus, view, selected, onSelect, focus, onFocused, onLaidOut, onPrevious, onNext, credit } = props;
   const { t, settings } = useSettings();
   const text = usePageText(page, corpus);
@@ -157,7 +157,7 @@ export function MushafPage(props: Props) {
       </header>
 
       {/* Pages 1 and 2 are set larger, in fewer lines, as in the printed Mushaf. */}
-      <div className="page-body" data-lines={page <= 2 ? 9 : 15}>
+      <div className="page-body" data-page={page} data-lines={page <= 2 ? 9 : 15}>
         {!text ? (
           <div className="page-loading" aria-busy="true">
             <span className="spinner" aria-hidden="true" />
@@ -391,3 +391,9 @@ function Word(props: { text: string; mark?: WordMark; live: boolean; next: boole
     </span>
   );
 }
+
+/**
+ * Renders again only when something it shows changes (not when a sheet opens or the dock changes): a
+ * page is hundreds of words.
+ */
+export const MushafPage = memo(MushafPageView);

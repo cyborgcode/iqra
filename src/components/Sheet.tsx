@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Button, Glass } from "glisse";
+import { Button } from "glisse";
 import { useSettings } from "../state/settings";
 import { CrossIcon } from "./icons";
+import { Surface } from "./Surface";
 
 interface Props {
   open: boolean;
@@ -50,7 +51,7 @@ export function Sheet({ open, onClose, title, children, className = "" }: Props)
       }}
     >
       {shown && (
-        <Glass className="sheet-panel">
+        <Surface className="sheet-panel">
           <div className="sheet-head">
             <h2 id={titleId} className="sheet-title">
               {title}
@@ -58,7 +59,7 @@ export function Sheet({ open, onClose, title, children, className = "" }: Props)
             <Button aria-label={t.close} icon={<CrossIcon size={18} />} onClick={onClose} />
           </div>
           <div className="sheet-body">{children}</div>
-        </Glass>
+        </Surface>
       )}
     </dialog>
   );
