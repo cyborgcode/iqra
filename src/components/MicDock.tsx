@@ -8,7 +8,7 @@ import { navigate } from "../state/route";
 import { useSettings } from "../state/settings";
 import { useText } from "../state/text";
 import { openSheet, useSheet } from "../state/ui";
-import { CrossIcon, DownloadIcon, EyeIcon, EyeOffIcon, GearIcon, GlobeIcon, InfoIcon, InstallIcon, ListIcon, MicIcon, MoonIcon, MoreIcon, SparkIcon, StopIcon, SunIcon, TargetIcon, TrashIcon } from "./icons";
+import { CrossIcon, DownloadIcon, EyeIcon, EyeOffIcon, GearIcon, GlobeIcon, HintIcon, InfoIcon, InstallIcon, ListIcon, MicIcon, MoonIcon, MoreIcon, StopIcon, SunIcon, TargetIcon, TrashIcon } from "./icons";
 import { Sheet } from "./Sheet";
 import { ayahLabel, problemMessage } from "./labels";
 
@@ -111,7 +111,7 @@ export function MicDock(props: Props) {
           onStop={onStop}
         />
         {settings.memorize ? (
-          <Button aria-label={t.nextWord} title={t.nextWord} icon={<SparkIcon size={20} />} disabled={!text} onClick={onHint} />
+          <Button aria-label={t.nextWord} title={t.nextWord} icon={<HintIcon size={20} />} disabled={!text} onClick={onHint} />
         ) : last ? (
           <Button aria-label={`${t.lastResults}: ${formatPercent(last.accuracy, settings.lang)}`} title={t.lastResults} onClick={showLastSummary}>
             <span className="dock-score">{formatPercent(last.accuracy, settings.lang)}</span>
