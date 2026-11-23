@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -48,5 +48,38 @@ describe("the logo", () => {
     const shapes = [...logoSvg("", "").matchAll(/ d="([^"]+)"/g)].map((m) => m[1]);
     expect(shapes.length).toBeGreaterThan(0);
     for (const d of shapes) expect(icons).toContain(`d="${d}"`);
+  });
+});
+
+describe("the web app manifest", () => {
+  const manifest = JSON.parse(read("public/manifest.webmanifest")) as {
+    start_url: string;
+    display: string;
+    icons: { src: string; sizes: string; type: string; purpose?: string }[];
+  };
+
+  it("opens the app on its own", () => {
+    expect(manifest.start_url).toBe("/");
+    expect(manifest.display).toBe("standalone");
+  });
+
+  it("lists icons that exist, at the sizes it says, including maskable ones", () => {
+    for (const icon of manifest.icons) {
+      const file = path.join(ROOT, "public", icon.src);
+      expect(existsSync(file), icon.src).toBe(true);
+      if (icon.type !== "image/png") continue;
+      const png = readFileSync(file);
+      expect(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, icon.src).toBe(icon.sizes);
+    }
+    const sizes = (purpose?: string) => manifest.icons.filter((i) => i.type === "image/png" && i.purpose === purpose).map((i) => i.sizes);
+    expect(sizes()).toEqual(expect.arrayContaining(["192x192", "512x512"]));
+    expect(sizes("maskable")).toEqual(expect.arrayContaining(["192x192", "512x512"]));
+  });
+
+  it("is linked from the page, with an icon for Apple devices", () => {
+    const html = read("index.html");
+    expect(html).toContain('<link rel="manifest" href="/manifest.webmanifest" />');
+    const touch = html.match(/<link rel="apple-touch-icon" href="([^"]+)"/)?.[1];
+    expect(touch && existsSync(path.join(ROOT, "public", touch))).toBe(true);
   });
 });

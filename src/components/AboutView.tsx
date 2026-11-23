@@ -20,6 +20,8 @@ export function AboutView() {
         <p>{t.aboutIntro}</p>
         <h2>{t.aboutPrivacyTitle}</h2>
         <p>{t.aboutPrivacy}</p>
+        <h2>{t.aboutOfflineTitle}</h2>
+        <p>{t.aboutOffline}</p>
         <h2>{t.aboutLimitsTitle}</h2>
         <p>{t.aboutLimits}</p>
         <p className="disclaimer">{t.disclaimer}</p>

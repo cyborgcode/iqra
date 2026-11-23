@@ -189,6 +189,11 @@ const en = {
   creditShort: "Text: Tanzil",
   appearanceDark: "Dark appearance",
   appearanceLight: "Light appearance",
+  installApp: "Install the app",
+  installHint: "Open the Share menu, then choose “Add to Home Screen”.",
+  aboutOfflineTitle: "Works offline",
+  aboutOffline:
+    "Once opened, iqra keeps its pages on your device and opens without a connection; reciting works offline too once the speech model has been downloaded. You can install it as an app from your browser’s menu (on iPhone and iPad: Share, then “Add to Home Screen”).",
 };
 
 export type Strings = typeof en;
@@ -377,6 +382,11 @@ const ar: Strings = {
   creditShort: "النص: تنزيل",
   appearanceDark: "المظهر الداكن",
   appearanceLight: "المظهر الفاتح",
+  installApp: "ثبّت التطبيق",
+  installHint: "افتح قائمة المشاركة ثم اختر «إضافة إلى الشاشة الرئيسية».",
+  aboutOfflineTitle: "يعمل دون اتصال",
+  aboutOffline:
+    "بعد فتحه مرة يحفظ «اقرأ» صفحاته على جهازك ويفتح دون اتصال، وتعمل التلاوة دون اتصال أيضًا بعد تنزيل نموذج الصوت. ويمكنك تثبيته تطبيقًا من قائمة المتصفح (في آيفون وآيباد: مشاركة ثم «إضافة إلى الشاشة الرئيسية»).",
 };
 
 export const STRINGS: Record<Lang, Strings> = { en, ar };

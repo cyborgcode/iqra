@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button, Glass } from "glisse";
 import { formatDuration, formatPercent } from "../lib/format";
+import { promptInstall, useInstallOption } from "../lib/pwa";
 import { useModelStatus, type ModelStatus } from "../state/model";
 import { dismissError, onLevel, showLastSummary, useRecitation, type RecitationState } from "../state/recitation";
 import { navigate } from "../state/route";
 import { useSettings } from "../state/settings";
 import { useText } from "../state/text";
 import { openSheet, useSheet } from "../state/ui";
-import { CrossIcon, DownloadIcon, EyeIcon, EyeOffIcon, GearIcon, GlobeIcon, InfoIcon, ListIcon, MicIcon, MoonIcon, MoreIcon, SparkIcon, StopIcon, SunIcon, TargetIcon, TrashIcon } from "./icons";
+import { CrossIcon, DownloadIcon, EyeIcon, EyeOffIcon, GearIcon, GlobeIcon, InfoIcon, InstallIcon, ListIcon, MicIcon, MoonIcon, MoreIcon, SparkIcon, StopIcon, SunIcon, TargetIcon, TrashIcon } from "./icons";
 import { Sheet } from "./Sheet";
 import { ayahLabel, problemMessage } from "./labels";
 
@@ -202,8 +203,13 @@ interface MoreProps {
 export function MoreSheet({ busy, onClearPage, onClearAll }: MoreProps) {
   const { t, settings, update, resolvedTheme } = useSettings();
   const { lastSummary } = useRecitation();
+  const install = useInstallOption();
+  const [installHint, setInstallHint] = useState(false);
   const open = useSheet() === "more";
-  const close = () => openSheet(null);
+  const close = () => {
+    setInstallHint(false);
+    openSheet(null);
+  };
   const run = (action: () => void) => () => {
     close();
     action();
@@ -218,6 +224,19 @@ export function MoreSheet({ busy, onClearPage, onClearAll }: MoreProps) {
               <TargetIcon size={20} /> {t.lastResults}
               <span className="action-meta">{formatPercent(lastSummary.accuracy, settings.lang)}</span>
             </button>
+          </li>
+        )}
+        {install && (
+          <li>
+            <button
+              type="button"
+              className="action-row"
+              aria-expanded={install === "share-menu" ? installHint : undefined}
+              onClick={install === "prompt" ? run(() => void promptInstall()) : () => setInstallHint((shown) => !shown)}
+            >
+              <InstallIcon size={20} /> {t.installApp}
+            </button>
+            {install === "share-menu" && installHint && <p className="action-hint">{t.installHint}</p>}
           </li>
         )}
         <li>

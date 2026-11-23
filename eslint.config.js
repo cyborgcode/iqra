@@ -32,6 +32,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.worker },
   },
   {
+    files: ["src/sw.js"],
+    extends: [js.configs.recommended],
+    languageOptions: { globals: globals.serviceworker, sourceType: "script" },
+  },
+  {
     files: ["src/**/*.worklet.js"],
     extends: [js.configs.recommended],
     languageOptions: {

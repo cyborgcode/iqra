@@ -20,6 +20,9 @@ added.
   for the next word.
 - **Private by design.** Speech recognition runs entirely in your browser (a Web Worker running Whisper through
   ONNX Runtime). Audio never leaves the device. There is no backend, no accounts, no analytics, no ads.
+- **Installs as an app, works offline.** Add iqra to a phone's home screen or a computer as an app (More → Install
+  the app; on iPhone and iPad, Share → Add to Home Screen). It keeps its own files on the device, so it opens without
+  a connection, and reciting works offline too once the speech model has been downloaded.
 - **Costs nothing to run.** A static site on Vercel's free Hobby plan. The only network traffic is loading the site
   and a one-time download of the speech model from the Hugging Face Hub, which the browser then caches.
 - **Faithful text.** The Quran text is the Tanzil Project's Uthmani text, displayed exactly as published.
@@ -30,6 +33,7 @@ added.
 
 - [Local setup](#local-setup)
 - [Deploying to Vercel](#deploying-to-vercel)
+- [Installing and working offline](#installing-and-working-offline)
 - [How it works](#how-it-works)
 - [Speech models and how they were converted](#speech-models-and-how-they-were-converted)
 - [Quran text](#quran-text)
@@ -62,6 +66,7 @@ Open http://localhost:5173. Recording needs a secure context, which `localhost` 
 | `npm run preview` | Serve `dist/` with the exact production headers from `vercel.json` |
 | `npm run data` | Regenerate the Quran JSON from the Tanzil files in `data/tanzil/` |
 | `npm run licenses` | Regenerate `public/licenses/` from the installed packages |
+| `npm run icons` | Redraw the app icons in `public/icons/` from `public/favicon.svg` (needs Playwright) |
 
 ## Deploying to Vercel
 
@@ -83,9 +88,37 @@ Open http://localhost:5173. Recording needs a secure context, which `localhost` 
 - **Caching.** Hashed assets and the versioned speech engine are cached for a year, the per-surah text files for a
   day.
 - **Routes.** `/page/1` … `/page/604`, `/settings` and `/about` are served by the single-page app.
+- **The service worker** (`/sw.js`) is never cached, so a new version is picked up at once.
 
 The deployment is about 43 MB, mostly the ONNX Runtime WebAssembly engine (served by the site instead of a
 third-party CDN). It is only downloaded when the speech model is first prepared.
+
+## Installing and working offline
+
+iqra is a Progressive Web App. `public/manifest.webmanifest` names it and gives its icons: the logo for browsers
+and desktops, and full-bleed squares for home screens that cut their own shape (Android's maskable icons, the Apple
+touch icon). `npm run icons` draws them from `public/favicon.svg`, and a test keeps that file identical to the logo
+the app draws.
+
+Browsers that offer installation (Chrome, Edge, Samsung Internet and others on Android and desktop) get **Install
+the app** in the More sheet instead of their own banner, which would cover the dock. On iPhone and iPad the same
+item explains Share → Add to Home Screen.
+
+A service worker ([`src/sw.js`](src/sw.js)) keeps the site's own files on the device:
+
+- **What it keeps** (about 2.7 MB): the page, scripts, styles and fonts, the 114 surah files and the licence texts.
+  The build lists them for it (`vite.config.ts`), with a version that changes whenever any of them does.
+- **What it leaves alone:** the speech model, downloaded from the Hugging Face Hub on first use, and the ONNX
+  Runtime engine (41 MB for both builds). Transformers.js keeps both in its own cache, which the service worker also
+  reads from, so nothing is stored twice and the engine is only downloaded by those who use the microphone.
+- **Pages** come from the network when it answers within 4 seconds, so a new version shows at once; otherwise from
+  the kept copy, which serves every address of the app. **Other files** come from the kept copies first.
+- **Updates:** a new version is downloaded in the background and kept alongside the old one until no open tab uses
+  the old one, so a page that is open never loses the files it was built with.
+- **Cross-origin isolation survives offline:** kept responses carry the same headers as the network's, so
+  multithreaded recognition works offline too.
+- After the speech model is downloaded, iqra asks the browser to keep its storage even when space runs low
+  (`navigator.storage.persist()`).
 
 ## How it works
 
@@ -308,7 +341,8 @@ data/tanzil/             Tanzil source files (verbatim)
 model-cards/             model cards of the ONNX builds on the Hub
 public/quran/            generated per-surah text (verbatim, with Tanzil's notice)
 public/licenses/         license texts shown from the About page
-scripts/                 data, license and model-conversion scripts
+public/icons/            app icons (drawn by scripts/build-icons.mjs)
+scripts/                 data, license, icon and model-conversion scripts
 src/data/                generated surah metadata and Mushaf divisions
 src/lib/arabic/          normalization and word similarity
 src/lib/quran/           pages, juz and hizb; the whole text as one word sequence; ayah references
@@ -318,6 +352,7 @@ src/lib/asr/             page-side client for the speech worker
 src/worker/              the speech-recognition Web Worker
 src/state/               settings, the current page, the recitation in progress
 src/components/          React UI (glisse components)
+src/sw.js                the service worker (its file list is added by the build)
 ```
 
 The interface uses the [glisse](https://github.com/0kzh/glisse) Liquid Glass components (Button, Glass, Input,

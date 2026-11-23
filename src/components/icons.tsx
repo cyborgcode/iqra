@@ -93,6 +93,14 @@ export const DownloadIcon = (p: IconProps) => (
   </Icon>
 );
 
+/** A phone receiving the app. */
+export const InstallIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="6.5" y="2.8" width="11" height="18.4" rx="2.6" />
+    <path d="M12 6.8v7M9 10.9l3 3 3-3M10.6 17.9h2.8" />
+  </Icon>
+);
+
 export const SunIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="4" />

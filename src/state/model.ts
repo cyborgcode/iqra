@@ -42,6 +42,8 @@ async function start(model: ModelId, engine: EnginePreference, myKey: string, do
       if (key === myKey && downloading) set({ phase: "downloading", loaded: p.loaded, total: p.total });
     });
     if (key === myKey) set({ phase: "ready", backend: info.backend, threads: info.threads });
+    // Ask the browser to keep the downloaded model (and the offline copy of the site) when space runs low.
+    if (downloading) navigator.storage?.persist?.().catch(() => {});
   } catch (error) {
     if (key === myKey) set({ phase: "error", message: error instanceof Error ? error.message : String(error) });
   }

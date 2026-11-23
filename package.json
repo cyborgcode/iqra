@@ -17,7 +17,8 @@
     "typecheck": "tsc -b",
     "check": "npm run lint && npm run typecheck && npm test",
     "data": "node scripts/build-quran-data.mjs",
-    "licenses": "node scripts/build-licenses.mjs"
+    "licenses": "node scripts/build-licenses.mjs",
+    "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "@fontsource/amiri-quran": "^5.3.0",

@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
-import { createReadStream, readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { createReadStream, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
@@ -43,6 +44,48 @@ function ortRuntime(): Plugin {
   };
 }
 
+// Offline: a service worker (src/sw.js) keeps the site's own files on the device so that iqra opens and
+// works without a connection. The build gives it the list: the bundle and the public files, except the
+// ONNX Runtime engine (Transformers.js keeps it in its own cache once downloaded, as it keeps the speech
+// model), the WOFF fonts only browsers without WOFF2 use, and the app icons, which only the browser's
+// install needs. The version changes whenever any of those files does.
+const SKIP_OFFLINE = [/^ort\//, /\.woff$/, /^icons\//, /^sw\.js$/];
+
+function filesIn(dir: string): string[] {
+  if (!dir) return [];
+  return (readdirSync(dir, { recursive: true }) as string[])
+    .map((file) => file.split(path.sep).join("/"))
+    .filter((file) => !file.split("/").some((part) => part.startsWith(".")) && statSync(path.join(dir, file)).isFile());
+}
+
+function serviceWorker(): Plugin {
+  let publicDir = "";
+  const digest = (content: string | Uint8Array) => createHash("sha256").update(content).digest("hex");
+  return {
+    name: "iqra:service-worker",
+    apply: "build",
+    // After the HTML page has been added to the bundle.
+    enforce: "post",
+    configResolved(config) {
+      publicDir = config.publicDir;
+    },
+    generateBundle(_options, bundle) {
+      const hashes = new Map<string, string>();
+      for (const item of Object.values(bundle)) hashes.set(item.fileName, digest(item.type === "chunk" ? item.code : item.source));
+      for (const file of filesIn(publicDir)) hashes.set(file, digest(readFileSync(path.join(publicDir, file))));
+      const kept = [...hashes.keys()].filter((file) => !SKIP_OFFLINE.some((skip) => skip.test(file))).sort();
+      if (!kept.includes("index.html")) throw new Error("The service worker needs index.html in the bundle");
+      const version = digest(kept.map((file) => `${file} ${hashes.get(file)}`).join("\n")).slice(0, 16);
+      const precache = { version, files: kept.map((file) => `/${file}`) };
+      this.emitFile({
+        type: "asset",
+        fileName: "sw.js",
+        source: `self.__IQRA_PRECACHE__ = ${JSON.stringify(precache)};\n\n${readFileSync(path.resolve("src/sw.js"), "utf8")}`,
+      });
+    },
+  };
+}
+
 // Cross-origin isolation enables SharedArrayBuffer, which multithreaded WebAssembly needs
 // (2× faster transcription in testing). Production headers live in vercel.json; `vite preview`
 // serves the same ones so the built site can be tested as deployed. The dev server only gets the
@@ -57,7 +100,7 @@ const ISOLATION_HEADERS = {
 };
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), ortRuntime()],
+  plugins: [react(), tailwindcss(), ortRuntime(), serviceWorker()],
   server: { headers: ISOLATION_HEADERS },
   preview: { headers: SITE_HEADERS },
   define: {

@@ -1593,6 +1593,13 @@ a {
   font-size: 0.85rem;
   color: var(--accent);
 }
+/* Under an action, aligned with its label (row padding + icon + gap). */
+.action-hint {
+  padding-block: 0 10px;
+  padding-inline: calc(12px + 20px + 12px) 12px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
 
 /* ---------- Motion ---------- */
 
