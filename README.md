@@ -5,9 +5,10 @@ particular, press the microphone and recite. iqra finds where you are in the who
 follows you word by word as you recite, and marks which words you recited as written, missed, said differently, or
 added.
 
-- **The whole book.** All 604 pages of the Madani Mushaf, with surah headings, juz and hizb divisions from Tanzil's
-  metadata. Contents by surah, juz, hizb quarter, page number or `surah:ayah`; swipe, arrow keys or buttons to turn
-  pages.
+- **The whole book, a page at a time.** All 604 pages of the Madani Mushaf, with surah headings, ayah ornaments,
+  hizb-quarter signs, and juz and hizb divisions from Tanzil's metadata. Each page fills the screen like a printed
+  page, with nothing to scroll; wide screens show two pages side by side, as an open Mushaf. Contents by surah, juz,
+  hizb quarter, page number or `surah:ayah`; swipe, arrow keys or the page footer to turn pages.
 - **Start anywhere, follow along.** The first words you recite are looked up in all 77,433 words of the Quran. From
   then on the book follows you, turning pages as you go, with words lighting up while you recite them.
 - **Recite from memory.** Hide the words; each one appears as you recite it. Press and hold an ayah to peek, or ask
@@ -84,7 +85,8 @@ third-party CDN). It is only downloaded when the speech model is first prepared.
 ## How it works
 
 1. **Open the Mushaf.** Each page shows its ayahs (page boundaries from Tanzil's metadata), loaded from one small
-   JSON file per surah. In the background the remaining surah files are fetched and indexed for searching.
+   JSON file per surah, and is sized to the screen (below). In the background the remaining surah files are fetched
+   and indexed for searching.
 2. **Record.** `getUserMedia` feeds an AudioWorklet that resamples to 16 kHz mono Float32 as it records, after two
    low-pass filters to prevent aliasing. Denied permission, a missing or busy microphone and unsupported browsers
    get clear messages.
@@ -99,6 +101,25 @@ third-party CDN). It is only downloaded when the speech model is first prepared.
 5. **Find and follow.** Each finished segment is placed in the Quran (below) and its words are marked correct,
    different (wrong) or missed, plus any added words. Marks stay on the book until you clear them; the summary
    lists the ayahs to look at again and can start you on them.
+
+### A whole page on the screen
+
+Tanzil publishes where each page starts but not its line breaks, so the lines are flowed and justified by the
+browser, and each page is sized like a printed one ([`src/components/fit.ts`](src/components/fit.ts)). For a page
+box of height $H$ and the base line height $\lambda_0 = 2.05$ em, the font size is the largest that fits,
+
+$$f^* = \max\Big\{\, f \le \frac{H}{15\,\lambda_0} \;:\; h(f, \lambda_0) \le H \Big\}$$
+
+where $h$ is the height the browser lays the page out at (found by bisection), capped at the size where the Madani
+Mushaf's 15 lines fill the page (9 lines on the two opening pages, which print sets larger). The line height is
+then opened up, $\lambda \in [\lambda_0, 2.75]$, until $h(f^*, \lambda) = H$: line height moves only the height, not
+the line breaks, so it is found by interpolation. Pages shown side by side share one font size. Marks never change
+the layout (badges and added-word pins are drawn over the text), so a page keeps its size while it is recited.
+
+Across all 604 pages this gives 18–21 px text on a 390 × 844 phone, 14–17 px on a 360 × 640 one and about 28 px on
+a tablet, with nothing to scroll. Where a page would need text smaller than 14 px (a phone held sideways), it
+switches to 20 px text that scrolls, and Settings offers *Large* and *Extra large* text that scroll for anyone who
+needs bigger letters.
 
 ### Why cut at every pause (and not fixed 30 s windows, or ayah by ayah)
 
@@ -302,6 +323,8 @@ so in Arabic they are rendered in left-to-right islands with their items in righ
   are where recognition noise and real mistakes overlap; raise the strictness to catch more of them.
 - If a reciter goes more than 24 s without any pause, that stretch is cut at its quietest point, which can split a
   word.
+- Pages follow the Madani page boundaries but not its exact lines, which Tanzil does not publish: a line here
+  holds a few more or fewer words than in print, and justification widens spaces rather than stretching letters.
 - Following updates about every second or two, not with every syllable: the model needs that long to transcribe.
 - An ayah whose words also occur elsewhere (refrains such as 55:13) is placed on the open page, or near where you
   were reciting; recited on its own from another page, it is placed at the first ayah with those words.
