@@ -127,24 +127,26 @@ A service worker ([`src/sw.js`](src/sw.js)) keeps the site's own files on the de
    JSON file per surah, and is sized to the screen (below). In the background the remaining surah files are fetched
    and indexed for searching.
 2. **Record.** `getUserMedia` feeds an AudioWorklet that resamples to 16 kHz mono Float32 as it records, after two
-   low-pass filters to prevent aliasing. The voice is taken as it is, at the microphone's own sample rate, without
-   the echo cancelling, noise suppression or gain control phones apply for calls (gain control turns the room up
-   in every pause). Denied permission, a missing or busy microphone and unsupported browsers get clear messages.
+   low-pass filters to prevent aliasing. Echo cancelling and noise suppression are off (they cut into a held
+   recitation); gain control stays on, as a phone's microphone can otherwise be very quiet. Denied permission, a
+   missing or busy microphone and unsupported browsers get clear messages.
 3. **Split at pauses.** Whisper hears at most 30 s at a time, and these Quran models were trained on one ayah per
    clip. The recording is cut at every pause of at least 0.35 s, so each segment is about one ayah or phrase;
    while following, a segment longer than 15 s (a long ayah with no pause) is cut at its quietest point, so the
    book is never far behind.
 4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: the encoder on WebGPU when the
-   device has a real GPU adapter, everything else on multithreaded WebAssembly. Every request costs at least one
-   pass of the encoder over a whole 30 s window, which on a phone's processor alone takes about a second; on its
-   graphics processor, a fraction of that. The model makes one run on a second of silence while it loads, so the
-   first phrase is not slowed by setting it up. The recording is looked at four times a second, and a phrase is
-   sent to the model as soon as you pause after it, without waiting for the next one (a phrase too short to stand
-   alone waits for a longer pause, as it would be joined to the next). While you are reciting and the model has
-   nothing finished to do, it also transcribes the phrase so far, so the words you are saying light up
-   provisionally; not in a pause, where the phrase is about to be finished. A request may produce at most
-   20 tokens per second of audio, well above the fastest recitation, so a model repeating itself cannot hold up
-   the phrases after it.
+   device has a real GPU adapter, everything else on multithreaded WebAssembly; if the graphics processor fails,
+   it carries on with WebAssembly. Every request costs at least one pass of the encoder over a whole 30 s window,
+   which on a phone's processor alone takes about a second, on its graphics processor a fraction of that. The
+   recording is looked at four times a second, and a phrase is sent to the model as soon as you pause after it,
+   without waiting for the next one (a phrase too short to stand alone waits for a longer pause, as it would be
+   joined to the next). Each phrase is first brought to a steady loudness (Whisper's input depends on it; a quiet
+   phrase is raised by up to 30 dB). While you are reciting and the model has nothing finished to do, it also
+   transcribes the phrase so far, so the words you are saying light up provisionally; not in a pause, where the
+   phrase is about to be finished. A request may produce at most 45 tokens per second of audio: fully vowelled
+   text takes 5 to 7 tokens a word (measured with the model's tokenizer), so a fast reciter needs about 20, and
+   the limit only stops a model repeating itself from holding up the phrases after it. If the model fails,
+   the recitation stops with the reason. Settings shows the engine in use and how long the last phrase took.
 5. **Find and follow.** Each finished segment is placed in the Quran (below) and its words are marked correct,
    different (wrong) or missed, plus any added words. Marks stay on the book until you clear them; the summary
    lists the ayahs to look at again and can start you on them.

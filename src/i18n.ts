@@ -24,6 +24,7 @@ const en = {
   modelDownloading: "Downloading the speech model",
   modelLoading: "Preparing the speech model",
   modelFailed: "The speech model could not be loaded.",
+  recognitionFailed: "Recognition stopped working, so the recitation was stopped.",
   retry: "Try again",
 
   limitReached: "The recording reached its 15-minute limit and stopped.",
@@ -79,6 +80,7 @@ const en = {
   engineWasm: "Compatibility",
   engineNote: "Automatic uses the graphics processor (WebGPU) when your device has one. Choose Compatibility if recognition is slow or fails.",
   engineInUse: (name: string, threads: number) => `In use: ${name}${threads > 1 ? `, ${threads} threads` : ""}.`,
+  engineTiming: (audio: number, seconds: number) => `Last phrase: ${audio.toFixed(1)} s of recitation, recognized in ${seconds.toFixed(1)} s.`,
   setStrictness: "Strictness",
   strictnessNote: "How closely each word must match the text. Lenient forgives small recognition errors; strict also flags small differences.",
   lenient: "Lenient",
@@ -220,6 +222,7 @@ const ar: Strings = {
   modelDownloading: "جارٍ تنزيل نموذج الصوت",
   modelLoading: "جارٍ تجهيز نموذج الصوت",
   modelFailed: "تعذّر تحميل نموذج الصوت.",
+  recognitionFailed: "توقّف التعرّف على الصوت، فأُوقفت التلاوة.",
   retry: "أعد المحاولة",
 
   limitReached: "بلغ التسجيل حدّه الأقصى (١٥ دقيقة) فتوقف.",
@@ -275,6 +278,7 @@ const ar: Strings = {
   engineWasm: "توافقية",
   engineNote: "يستخدم الوضع التلقائي معالج الرسوميات (WebGPU) إن وُجد في جهازك. اختر «توافقية» إن كان التعرّف بطيئًا أو تعذّر.",
   engineInUse: (name, threads) => `المستخدم الآن: ${name}${threads > 1 ? `، ${formatNumber(threads, "ar")} مسارات` : ""}.`,
+  engineTiming: (audio, seconds) => `آخر مقطع: ${formatNumber(Number(audio.toFixed(1)), "ar")} ث من التلاوة، تُعرِّف عليه في ${formatNumber(Number(seconds.toFixed(1)), "ar")} ث.`,
   setStrictness: "درجة التدقيق",
   strictnessNote: "مدى تطابق كل كلمة مع النص. المتساهل يتجاوز أخطاء التعرّف الصغيرة، والصارم ينبّه حتى على الفروق الصغيرة.",
   lenient: "متساهل",

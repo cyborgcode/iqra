@@ -19,7 +19,7 @@ export const marks: BookMarks = { words: new Map(), extras: new Map() };
 export type Phase = "idle" | "starting" | "listening" | "finishing";
 
 /** Why a recitation could not start or finish. */
-export type Problem = RecorderProblem | "nothing" | "model" | "nowasm";
+export type Problem = RecorderProblem | "nothing" | "model" | "recognition" | "nowasm";
 
 export interface Summary {
   /** First and last corpus word recited. */
@@ -151,7 +151,17 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
     const tracker = new Tracker(text.index, marks, threshold);
     if (state.startAyah !== null) tracker.startAt(text.corpus.ayahStart[state.startAyah]!);
     const s: Session = { tracker, live: null!, handle: null, timer: null, hint, limitReached: false, firstAyah: state.startAyah, texts: [] };
-    s.live = new LiveTranscriber((segment) => asr.transcribe([segment]).then((texts) => texts[0] ?? ""), {
+    // A request the model cannot answer ends the recitation with the reason, rather than leaving the
+    // book waiting for words that never come.
+    const recognize = (segment: Float32Array) =>
+      asr.transcribe([segment]).then(
+        (texts) => texts[0] ?? "",
+        (error: unknown) => {
+          recognitionFailed(s, error);
+          return "";
+        },
+      );
+    s.live = new LiveTranscriber(recognize, {
       maxSegmentSeconds: MAX_PHRASE_SECONDS,
       onFinal: (_, transcript) => {
         s.texts.push(transcript);
@@ -215,6 +225,15 @@ export async function stopRecitation(): Promise<void> {
     session = null;
     set({ phase: "idle", live: null, error: { problem: "model", detail: error instanceof Error ? error.message : String(error) } });
   }
+}
+
+function recognitionFailed(s: Session, error: unknown) {
+  if (session !== s) return;
+  session = null;
+  if (s.timer) clearInterval(s.timer);
+  s.handle?.cancel();
+  s.handle = null;
+  set({ phase: "idle", live: null, error: { problem: "recognition", detail: error instanceof Error ? error.message : String(error) } });
 }
 
 /** Stops listening and forgets this recitation's audio (its marks so far stay). */

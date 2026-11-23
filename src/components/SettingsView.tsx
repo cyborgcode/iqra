@@ -3,7 +3,7 @@ import { Button } from "glisse";
 import { RangeSlider, Segmented, Toggle } from "./Directional";
 import { MODELS, RUNTIME, modelBytes } from "../config/models";
 import { PALETTES } from "../lib/palettes";
-import { deleteDownloads, engineFor } from "../lib/asr/client";
+import { asr, deleteDownloads, engineFor } from "../lib/asr/client";
 import { formatMegabytes, formatPercent } from "../lib/format";
 import { resetModel, useModelStatus } from "../state/model";
 import { DEFAULT_THRESHOLD, useSettings } from "../state/settings";
@@ -159,7 +159,10 @@ export function SettingsView() {
         />
         <p className="text-muted text-sm">{t.engineNote}</p>
         {model.phase === "ready" && (
-          <p className="text-sm">{t.engineInUse(model.backend === "webgpu" ? "WebGPU" : "WebAssembly", model.threads)}</p>
+          <p className="text-sm">
+            {t.engineInUse(model.backend === "webgpu" ? "WebGPU" : "WebAssembly", model.threads)}
+            {asr.lastTiming && ` ${t.engineTiming(asr.lastTiming.audioSeconds, asr.lastTiming.ms / 1000)}`}
+          </p>
         )}
       </Surface>
 

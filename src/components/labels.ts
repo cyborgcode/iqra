@@ -38,6 +38,8 @@ export function problemMessage(problem: Problem, t: Strings): string {
       return t.nothingFound;
     case "model":
       return t.modelFailed;
+    case "recognition":
+      return t.recognitionFailed;
     case "nowasm":
       return t.noWasm;
     default:

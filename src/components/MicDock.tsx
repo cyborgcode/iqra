@@ -94,7 +94,10 @@ export function MicDock(props: Props) {
       <div className="dock-float" role="alert">
         {rec.error && (
           <p className="dock-pill dock-error">
-            <span>{rec.error.problem === "model" ? `${t.modelFailed} ${rec.error.detail ?? ""}` : problemMessage(rec.error.problem, t)}</span>
+            <span>
+              {problemMessage(rec.error.problem, t)}
+              {(rec.error.problem === "model" || rec.error.problem === "recognition") && rec.error.detail ? ` ${rec.error.detail}` : ""}
+            </span>
             <button type="button" className="dock-dismiss" aria-label={t.close} onClick={dismissError}>
               <CrossIcon size={16} />
             </button>

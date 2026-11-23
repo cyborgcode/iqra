@@ -12,6 +12,7 @@ import {
 } from "@huggingface/transformers";
 import { MODELS, RUNTIME, type ModelConfig, type ModelId } from "../config/models";
 import { hasWebGPU } from "../lib/asr/gpu";
+import { leveled } from "../lib/audio/level";
 import type { Backend, EnginePreference, WorkerRequest, WorkerResponse } from "../lib/asr/protocol";
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -143,23 +144,34 @@ async function load(id: ModelId, origin: string, engine: EnginePreference): Prom
   for (const f of model.files) perFile.set(f.path, f.bytes);
   report(true);
 
-  // A first run is slower (memory to set up, and on the graphics processor its programs to compile):
-  // do it now, on a second of silence, rather than on the reciter's first phrase.
-  await pipe(new Float32Array(16000), { language: "arabic", task: "transcribe", max_new_tokens: 2 } as Parameters<typeof pipe>[1]).catch(
-    (error: unknown) => console.warn("Warm-up run failed", error),
-  );
-
   current = { id, pipe, backend };
   post({ type: "ready", model: id, backend, threads: env.backends.onnx.wasm?.numThreads ?? 1 });
 }
 
 /**
- * The most tokens a phrase can take: well above the fastest recitation (about 3 words a second, at a
- * few tokens each with their vowel marks), so it only stops the model when it repeats itself, which
- * it otherwise does up to its limit of 448 tokens, holding up every phrase after.
+ * The most tokens a request can produce: far above any recitation (fully vowelled Arabic can take
+ * several tokens a word, and a fast reciter says three words a second), so it only stops a model
+ * that repeats itself, which it otherwise does up to its limit of 448 tokens, holding up every
+ * phrase after.
  */
 function tokenBudget(samples: number): number {
-  return Math.min(440, Math.ceil((samples / 16000) * 20) + 16);
+  return Math.min(440, Math.ceil((samples / 16000) * 45) + 24);
+}
+
+async function recognize(segment: Float32Array): Promise<string> {
+  const pipe = current!.pipe;
+  const options = { language: "arabic", task: "transcribe", max_new_tokens: tokenBudget(segment.length) } as Parameters<typeof pipe>[1];
+  const output = await pipe(leveled(segment), options);
+  return (Array.isArray(output) ? output.map((o) => o.text).join(" ") : output.text).trim();
+}
+
+/** If the graphics processor fails while transcribing, carry on with WebAssembly (and say so). */
+async function fallBackToWasm(): Promise<void> {
+  const { id, pipe } = current!;
+  current = null;
+  await pipe.dispose().catch(() => {});
+  current = { id, pipe: await buildPipeline(MODELS[id], "wasm", () => {}), backend: "wasm" };
+  post({ type: "ready", model: id, backend: "wasm", threads: env.backends.onnx.wasm?.numThreads ?? 1 });
 }
 
 async function transcribe(id: number, segments: Float32Array[]): Promise<void> {
@@ -167,11 +179,16 @@ async function transcribe(id: number, segments: Float32Array[]): Promise<void> {
   const started = performance.now();
   const texts: string[] = [];
   for (const [i, segment] of segments.entries()) {
-    const output = await current.pipe(segment, { language: "arabic", task: "transcribe", max_new_tokens: tokenBudget(segment.length) } as Parameters<
-      typeof current.pipe
-    >[1]);
-    const text = Array.isArray(output) ? output.map((o) => o.text).join(" ") : output.text;
-    texts.push(text.trim());
+    let text: string;
+    try {
+      text = await recognize(segment);
+    } catch (error) {
+      if (current?.backend !== "webgpu") throw error;
+      console.warn("WebGPU failed while transcribing; using WebAssembly from now on", error);
+      await fallBackToWasm();
+      text = await recognize(segment);
+    }
+    texts.push(text);
     post({ type: "segment", id, done: i + 1, total: segments.length });
   }
   post({ type: "result", id, texts, ms: Math.round(performance.now() - started) });

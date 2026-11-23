@@ -69,12 +69,20 @@ class AsrClient {
   private worker: Worker | null = null;
   private nextId = 1;
   private listeners = new Set<(message: WorkerResponse) => void>();
+  private engineListeners = new Set<(info: ReadyInfo) => void>();
   private loaded: ModelId | null = null;
+  /** How long the last request took: seconds of audio, and milliseconds to transcribe them. */
+  lastTiming: { audioSeconds: number; ms: number } | null = null;
 
   private get port(): Worker {
     if (!this.worker) {
       const worker = new Worker(new URL("../../worker/asr.worker.ts", import.meta.url), { type: "module", name: "iqra-asr" });
-      worker.onmessage = (event: MessageEvent<WorkerResponse>) => this.listeners.forEach((l) => l(event.data));
+      worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+        const m = event.data;
+        // The engine in use, also when it changes after loading (the graphics processor failed).
+        if (m.type === "ready") this.engineListeners.forEach((l) => l({ backend: m.backend, threads: m.threads }));
+        this.listeners.forEach((l) => l(m));
+      };
       worker.onerror = (event) => {
         const message: WorkerResponse = { type: "error", during: "load", message: event.message || "The speech engine failed to start." };
         this.listeners.forEach((l) => l(message));
@@ -115,11 +123,14 @@ class AsrClient {
     const id = this.nextId++;
     // Each segment gets its own buffer so it can be transferred without copying the whole recording.
     const owned = segments.map((s) => s.slice());
+    // Measured now: the buffers are handed over to the worker (and empty here) once sent.
+    const audioSeconds = owned.reduce((sum, a) => sum + a.length, 0) / 16000;
     return new Promise((resolve, reject) => {
       const listener = (m: WorkerResponse) => {
         if (m.type === "segment" && m.id === id) onSegment?.(m.done, m.total);
         else if (m.type === "result" && m.id === id) {
           this.listeners.delete(listener);
+          this.lastTiming = { audioSeconds, ms: m.ms };
           resolve(m.texts);
         } else if (m.type === "error" && (m.id === id || m.during === "load")) {
           this.listeners.delete(listener);
@@ -129,6 +140,12 @@ class AsrClient {
       this.listeners.add(listener);
       this.send({ type: "transcribe", id, segments: owned }, owned.map((s) => s.buffer));
     });
+  }
+
+  /** Calls `listener` with the engine in use whenever the worker reports it. */
+  onEngine(listener: (info: ReadyInfo) => void): () => void {
+    this.engineListeners.add(listener);
+    return () => this.engineListeners.delete(listener);
   }
 
   /** Stops the worker and frees the model's memory. */

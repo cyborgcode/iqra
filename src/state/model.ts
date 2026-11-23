@@ -27,6 +27,11 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+// If the graphics processor fails after loading, the worker carries on with WebAssembly: show it.
+asr.onEngine((info) => {
+  if (status.phase === "ready" && (status.backend !== info.backend || status.threads !== info.threads)) set({ phase: "ready", ...info });
+});
+
 export function useModelStatus(): ModelStatus {
   return useSyncExternalStore(subscribe, () => status);
 }
