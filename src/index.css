@@ -1398,9 +1398,14 @@ a {
   color: inherit;
   overflow: visible;
 }
+/* The page behind a sheet is dimmed lightly in light mode, so the sheet's translucent glass stays light,
+   and strongly in dark mode. (Selectors, not variables: older browsers give ::backdrop no inherited values.) */
 .sheet::backdrop {
-  background: rgb(0 0 0 / 0.6);
+  background: rgb(15 30 50 / 0.16);
   backdrop-filter: blur(2px);
+}
+[data-theme="dark"] .sheet::backdrop {
+  background: rgb(0 0 0 / 0.6);
 }
 .sheet[open] {
   animation: iqra-sheet 0.28s ease-out;
