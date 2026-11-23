@@ -1,10 +1,5 @@
-/**
- * The favicon and the browser's theme colour follow the chosen theme. The mark is the same drawing as
- * <AppMark> (src/components/icons.tsx), as an SVG string with the tile's two colours and the ink filled in.
- */
-export function logoSvg(from: string, to: string, ink = "#000"): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#g)"/><g transform="translate(32 32) scale(1.2) translate(-32 -40.1)"><path d="M32 31.5c-5.6-4.4-13.6-5.2-20-3.6v22.2c6.4-1.6 14.4-.8 20 3.6 5.6-4.4 13.6-5.2 20-3.6V27.9c-6.4-1.6-14.4-.8-20 3.6Z" fill="${ink}"/><path d="M32 33v19" stroke="url(#g)" stroke-width="2.2" stroke-linecap="round"/></g></svg>`;
-}
+/** The favicon and the browser's theme colour follow the chosen theme. */
+import { logoSvg } from "./logo";
 
 let canvas: CanvasRenderingContext2D | null = null;
 
@@ -33,8 +28,8 @@ function rootColor(name: string): string | null {
 
 /** Point the favicon and the browser's theme colour at the current theme. */
 export function applyBrandColors() {
-  const from = rootColor("--mic-a");
-  const to = rootColor("--mic-b");
+  const from = rootColor("--logo-a");
+  const to = rootColor("--logo-b");
   if (from && to) {
     const href = `data:image/svg+xml,${encodeURIComponent(logoSvg(from, to))}`;
     document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]').forEach((link) => (link.href = href));

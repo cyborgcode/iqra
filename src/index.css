@@ -56,6 +56,9 @@
   --mic-a: oklch(0.85 calc(0.09 * var(--c)) var(--h));
   --mic-b: oklch(0.76 calc(0.12 * var(--c)) var(--h));
   --mic-ink: #000;
+  /* The logo tile: bleu ciel deepening a little towards one corner, so its white Mushaf always reads. */
+  --logo-a: oklch(0.8 calc(0.11 * var(--c)) var(--h));
+  --logo-b: oklch(0.66 calc(0.14 * var(--c)) var(--h));
 
   /* glisse */
   --lg-fill: oklch(0.8 calc(0.11 * var(--c)) var(--h));

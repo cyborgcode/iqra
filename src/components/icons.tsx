@@ -133,8 +133,8 @@ export const ArrowIcon = (p: IconProps) => (
 );
 
 /**
- * iqra's mark: a black open Mushaf on a rounded tile in the theme's light colour (bleu ciel by default).
- * Drawn for iqra; src/lib/brand.ts draws the same mark as a string for the favicon.
+ * iqra's mark: a white open Mushaf on a rounded tile in the theme's colour (bleu ciel by default), in
+ * every theme. Drawn for iqra; src/lib/logo.ts draws the same mark as a string for the favicon.
  */
 export function AppMark({ size = 32, ...rest }: IconProps) {
   const id = useId();
@@ -143,14 +143,13 @@ export function AppMark({ size = 32, ...rest }: IconProps) {
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false" {...rest}>
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="var(--mic-a)" />
-          <stop offset="1" stopColor="var(--mic-b)" />
+          <stop offset="0" stopColor="var(--logo-a)" />
+          <stop offset="1" stopColor="var(--logo-b)" />
         </linearGradient>
       </defs>
       <rect width="64" height="64" rx="15" fill={gradient} />
       <g transform="translate(32 32) scale(1.2) translate(-32 -40.1)">
-        <path d="M32 31.5c-5.6-4.4-13.6-5.2-20-3.6v22.2c6.4-1.6 14.4-.8 20 3.6 5.6-4.4 13.6-5.2 20-3.6V27.9c-6.4-1.6-14.4-.8-20 3.6Z" fill="var(--mic-ink)" />
-        <path d="M32 33v19" stroke={gradient} strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M32 31.5c-5.6-4.4-13.6-5.2-20-3.6v22.2c6.4-1.6 14.4-.8 20 3.6 5.6-4.4 13.6-5.2 20-3.6V27.9c-6.4-1.6-14.4-.8-20 3.6Z" fill="#fff" />
       </g>
     </svg>
   );
