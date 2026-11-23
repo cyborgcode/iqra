@@ -131,7 +131,7 @@ const en = {
   indexSurahs: "Surahs",
   indexJuz: "Juz",
   indexHizb: "Hizb",
-  indexPage: "Page or ayah",
+  indexPage: "Go to",
   onPage: (n: string) => `p. ${n}`,
   quarterLabel: (part: number, hizb: string) =>
     [`Start of hizb ${hizb}`, `Quarter of hizb ${hizb}`, `Half of hizb ${hizb}`, `Three quarters of hizb ${hizb}`][part]!,

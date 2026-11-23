@@ -198,41 +198,43 @@ function PalettePicker() {
     buttons.current[i]?.focus();
   };
   return (
-    <div
-      role="radiogroup"
-      aria-labelledby="set-color"
-      className="swatches"
-      onKeyDown={(e) => {
-        const rtl = document.documentElement.dir === "rtl";
-        const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: 1, ArrowUp: -1 }[e.key];
-        if (step === undefined) return;
-        e.preventDefault();
-        choose((current + step + PALETTES.length) % PALETTES.length);
-      }}
-    >
-      {PALETTES.map((p, i) => {
-        const checked = i === current;
-        return (
-          <button
-            key={p.id}
-            ref={(el) => {
-              buttons.current[i] = el;
-            }}
-            type="button"
-            role="radio"
-            aria-checked={checked}
-            tabIndex={checked ? 0 : -1}
-            className="swatch"
-            style={{ "--h": p.h, "--c": p.c } as CSSProperties}
-            onClick={() => choose(i)}
-          >
-            <span className="swatch-dot" aria-hidden="true">
-              {checked && <CheckIcon size={18} />}
-            </span>
-            <span className="swatch-name">{t.paletteNames[p.id]}</span>
-          </button>
-        );
-      })}
+    <div className="swatches-box">
+      <div
+        role="radiogroup"
+        aria-labelledby="set-color"
+        className="swatches"
+        onKeyDown={(e) => {
+          const rtl = document.documentElement.dir === "rtl";
+          const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: 1, ArrowUp: -1 }[e.key];
+          if (step === undefined) return;
+          e.preventDefault();
+          choose((current + step + PALETTES.length) % PALETTES.length);
+        }}
+      >
+        {PALETTES.map((p, i) => {
+          const checked = i === current;
+          return (
+            <button
+              key={p.id}
+              ref={(el) => {
+                buttons.current[i] = el;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              className="swatch"
+              style={{ "--h": p.h, "--c": p.c } as CSSProperties}
+              onClick={() => choose(i)}
+            >
+              <span className="swatch-dot" aria-hidden="true">
+                {checked && <CheckIcon size={18} />}
+              </span>
+              <span className="swatch-name">{t.paletteNames[p.id]}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

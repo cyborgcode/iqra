@@ -358,7 +358,11 @@ src/sw.js                the service worker (its file list is added by the build
 The interface uses the [glisse](https://github.com/0kzh/glisse) Liquid Glass components (Button, Glass, Input,
 Menu, SearchField, SegmentedControl, Slider, Switch, TabBar). glisse lays out its sliding controls left to right,
 so in Arabic they are rendered in left-to-right islands with their items in right-to-left order
-([`src/components/Directional.tsx`](src/components/Directional.tsx)).
+([`src/components/Directional.tsx`](src/components/Directional.tsx)). Its segmented controls draw every segment
+84 px wide; iqra widens them together so the longest label fits on one line, within the width available. With
+$\ell$ the longest label's width, $W$ the width available and $n$ the number of segments, each segment is
+$w = \min\big(\max(84,\ \ell + 24),\ \lfloor W/n \rfloor\big)$ px wide, and labels only wrap (in taller segments)
+when $w < \ell + 4$.
 
 ## Limitations
 

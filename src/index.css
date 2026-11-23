@@ -623,6 +623,18 @@ a {
 
 /* ---------- Settings & About ---------- */
 
+/* Segment labels stay on one line (<Segmented> widens the segments to fit them), unless even the
+   widest segments the screen allows are too narrow: then they wrap in taller segments. */
+.segmented-box .lg-tab-text {
+  white-space: nowrap;
+}
+.segmented-box[data-wrap] .lg-tab-text {
+  padding-inline: 4px;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+}
+
 .setting {
   display: flex;
   flex-direction: column;
@@ -640,10 +652,20 @@ a {
   flex: 1;
 }
 
+/* Five across while every name fits on one line, three across on very narrow cards. */
+.swatches-box {
+  container-type: inline-size;
+}
 .swatches {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 4.6rem));
-  gap: 4px;
+  gap: 2px;
+}
+@container (max-width: 280px) {
+  .swatches {
+    grid-template-columns: repeat(3, minmax(0, 4.6rem));
+    row-gap: 6px;
+  }
 }
 .swatch {
   display: flex;
@@ -651,7 +673,7 @@ a {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  padding: 6px 2px 4px;
+  padding: 6px 0 4px;
   border-radius: 14px;
   cursor: pointer;
 }
@@ -1556,6 +1578,13 @@ a {
   font-weight: 650;
   color: var(--ok);
 }
+/* Under an action, aligned with its label (row padding + icon + gap). */
+.action-hint {
+  padding-block: 0 10px;
+  padding-inline: calc(12px + 20px + 12px) 12px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
 
 .review-list {
   display: grid;
@@ -1592,13 +1621,6 @@ a {
   margin-inline-start: auto;
   font-size: 0.85rem;
   color: var(--accent);
-}
-/* Under an action, aligned with its label (row padding + icon + gap). */
-.action-hint {
-  padding-block: 0 10px;
-  padding-inline: calc(12px + 20px + 12px) 12px;
-  font-size: 0.9rem;
-  color: var(--muted);
 }
 
 /* ---------- Motion ---------- */
