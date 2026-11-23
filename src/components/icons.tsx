@@ -1,5 +1,5 @@
 // Simple line icons drawn for iqra (24×24, currentColor). Decorative unless given a label.
-import type { SVGProps } from "react";
+import { useId, type SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
@@ -132,20 +132,43 @@ export const ArrowIcon = (p: IconProps) => (
   </Icon>
 );
 
-/** iqra's mark: an eight-pointed star (two overlapping squares), a common geometric motif. */
-export const StarMark = ({ size = 28, ...rest }: IconProps) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false" {...rest}>
-    <defs>
-      <linearGradient id="iqra-mark" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="var(--brand-a)" />
-        <stop offset="1" stopColor="var(--brand-b)" />
-      </linearGradient>
-    </defs>
-    <rect x="7" y="7" width="18" height="18" rx="2.5" fill="url(#iqra-mark)" />
-    <rect x="7" y="7" width="18" height="18" rx="2.5" fill="url(#iqra-mark)" transform="rotate(45 16 16)" />
-    <circle cx="16" cy="16" r="4.2" fill="var(--mark-core)" />
-  </svg>
-);
+/**
+ * iqra's mark: an open Mushaf under an eight-pointed star, with the star's voice (two arcs) rising from
+ * it, on a rounded tile in the theme's colour. Drawn for iqra; src/lib/brand.ts draws the same mark as a
+ * string for the favicon.
+ */
+export function AppMark({ size = 32, ...rest }: IconProps) {
+  const id = useId();
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false" {...rest}>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="var(--mic-a)" />
+          <stop offset="1" stopColor="var(--mic-b)" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="15" fill={`url(#${CSS.escape(id)})`} />
+      <LogoFigure gradient={`url(#${CSS.escape(id)})`} />
+    </svg>
+  );
+}
+
+function LogoFigure({ gradient }: { gradient: string }) {
+  return (
+    <>
+      <g fill="#fff">
+        <rect x="27.6" y="9.6" width="8.8" height="8.8" rx="1" />
+        <rect x="27.6" y="9.6" width="8.8" height="8.8" rx="1" transform="rotate(45 32 14)" />
+      </g>
+      <g fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" opacity="0.8">
+        <path d="M41.4 8.6a11 11 0 0 1 0 10.8" />
+        <path d="M22.6 8.6a11 11 0 0 0 0 10.8" />
+      </g>
+      <path d="M32 31.5c-5.6-4.4-13.6-5.2-20-3.6v22.2c6.4-1.6 14.4-.8 20 3.6 5.6-4.4 13.6-5.2 20-3.6V27.9c-6.4-1.6-14.4-.8-20 3.6Z" fill="#fff" />
+      <path d="M32 33v19" stroke={gradient} strokeWidth="2.2" strokeLinecap="round" />
+    </>
+  );
+}
 
 /** Points to the reading-start side of a left-to-right line; mirror it for the other direction. */
 export const ChevronIcon = (p: IconProps) => (

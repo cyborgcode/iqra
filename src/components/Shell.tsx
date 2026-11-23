@@ -2,7 +2,7 @@ import { Menu } from "glisse";
 import { Tabs } from "./Directional";
 import { bookRoute, navigate, type Route } from "../state/route";
 import { useSettings } from "../state/settings";
-import { BookIcon, DeviceIcon, GearIcon, GlobeIcon, InfoIcon, MoonIcon, StarMark, SunIcon } from "./icons";
+import { AppMark, BookIcon, DeviceIcon, GearIcon, GlobeIcon, InfoIcon, MoonIcon, SunIcon } from "./icons";
 
 function go(e: React.MouseEvent, route: Route) {
   e.preventDefault();
@@ -15,7 +15,7 @@ export function Header() {
   return (
     <header className="app-header">
       <a href="/" className="brand" onClick={(e) => go(e, bookRoute())}>
-        <StarMark size={30} />
+        <AppMark size={32} />
         <span className="brand-ar" lang="ar">
           اقرأ
         </span>
