@@ -84,7 +84,7 @@
 }
 
 [data-theme="dark"] {
-  /* AMOLED: true black everywhere (those pixels are off), thin light lines, the palette as accents. */
+  /* AMOLED: a true black page (those pixels are off), thin light lines, the palette as accents. */
   color-scheme: dark;
   --bg: #000;
   --sky-top: #000;
@@ -118,16 +118,11 @@
   --mic-a: oklch(0.85 calc(0.09 * var(--c)) var(--h));
   --mic-b: oklch(0.76 calc(0.12 * var(--c)) var(--h));
 
-  /* glisse: black glass, outlined by its edge and rim */
+  /* glisse keeps its own translucent dark glass, so what passes beneath shows through it, blurred;
+     only its accents take the palette. */
   --lg-fill: oklch(0.8 calc(0.11 * var(--c)) var(--h));
   --lg-on: oklch(0.74 calc(0.13 * var(--c)) var(--h));
   --lg-ring: oklch(0.8 calc(0.11 * var(--c)) var(--h) / 0.7);
-  --lg-glass: #000;
-  --lg-glass-active: rgb(26 26 28);
-  --lg-surface: rgb(0 0 0 / 0.97);
-  --lg-surface-edge: rgb(255 255 255 / 0.16);
-  --lg-edge: rgb(255 255 255 / 0.14);
-  --lg-shadow: transparent;
 }
 
 /* ---------- Base ---------- */
