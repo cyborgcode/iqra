@@ -5,7 +5,8 @@
  * - **Ahead of the model.** While the reciter is speaking, the words their voice has gone on to since
  *   the last word the model heard are lit at once, from how long each takes to say (its length in
  *   `units`, times the reciter's pace). Up to three words ahead, never in a pause (silence is not
- *   counted). In "recite from memory" they show where the reciter is without showing the words.
+ *   counted). In "recite from memory" they are revealed as they are said, in the text's own colour
+ *   until the model checks them.
  * - **Checked as it goes.** The words the model has heard and gone past are marked at once: correct
  *   straight away, a mistake once two transcripts in a row agree on it, so that one misheard
  *   transcript never shows a mistake that is not there.

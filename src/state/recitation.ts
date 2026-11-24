@@ -128,6 +128,8 @@ interface Session {
   pace: Pace;
   /** The latest provisional transcript of the phrase being recited, and where in the recording it ends. */
   preview: { index: number; view: LiveView; end: number } | null;
+  /** How far the last phrase had got (heard or lit) when the phrase with this index began. */
+  handover: { index: number; word: number } | null;
   handle: RecorderHandle | null;
   timer: ReturnType<typeof setInterval> | null;
   hint: () => readonly [number, number] | null;
@@ -158,19 +160,27 @@ function afterEvent(s: Session, event: TrackEvent) {
  *
  * Within a phrase, not past the end of its ayah: a reciter holds the end of one (a long madd), which
  * must not light the next. A new phrase, after a pause, goes on from where the last one ended, into
- * the next ayah: from where the model placed it, or, while its transcription is still on its way,
- * from what its provisional transcripts heard, so that the book does not wait for it.
+ * the next ayah: from where the model placed it or, while its transcription is still on its way, from
+ * as far as it had been heard or lit when it was sent, so that the book does not wait for it.
  */
 function wordsAheadOf(s: Session): readonly number[] {
-  const cursor = s.tracker.cursor;
-  if (cursor === null) return [];
   const corpus = s.tracker.corpus;
-  const current = s.preview?.index === s.live.openIndex ? s.preview : null;
-  const last = current ? current.view.heard.at(-1)! : Math.max(cursor - 1, s.preview?.view.heard.at(-1) ?? -1);
+  const index = s.live.openIndex;
+  const current = s.preview?.index === index ? s.preview : null;
+  // How far the last phrase had got when the phrase now being recited began.
+  if (s.handover?.index !== index) s.handover = { index, word: Math.max(s.preview?.view.heard.at(-1) ?? -1, state.ahead.at(-1) ?? -1) };
+  const cursor = s.tracker.cursor;
+  const before = Math.max(cursor === null ? -1 : cursor - 1, s.handover.word);
+  // Nowhere yet: the reciter has not been found.
+  if (!current && cursor === null && before < 0) return [];
+  const last = current ? current.view.heard.at(-1)! : before;
   const since = current ? current.end : s.live.phraseStart;
   const until = ayahEnd(corpus, current ? last : last + 1);
   const fresh = wordsAhead(corpus, last, s.live.speechSince(since), s.pace.secondsPerUnit, until);
-  const kept = state.ahead.filter((w) => w > last && w <= last + MAX_AHEAD && w < until);
+  // Lit before: those of the last phrase stay until it is marked, and so do those this phrase skipped,
+  // until they are marked missed; the rest, as far as they go on.
+  const skipped = (w: number) => current !== null && cursor !== null && w >= cursor && w < current.view.start;
+  const kept = state.ahead.filter((w) => (!current && w <= before) || skipped(w) || (w > last && w <= last + MAX_AHEAD && w < until));
   // One more word at a time (each look, ten times a second): catching up, as when the reciter has just
   // been found, runs along the words rather than jumping.
   const added = fresh.filter((w) => !kept.includes(w)).slice(0, 1);
@@ -200,6 +210,7 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
       live: null!,
       pace: new Pace(text.corpus),
       preview: null,
+      handover: null,
       handle: null,
       timer: null,
       hint,
@@ -389,8 +400,8 @@ export function clearMarks(from = 0, to = Number.POSITIVE_INFINITY) {
 
 /** "Recite from memory": shows one more word, after the last one recited (or `fallback`). */
 export function revealNextWord(fallback: number) {
-  const done = new Set([...state.revealed, ...(state.live?.heard ?? [])]);
-  let w = state.live?.end ?? state.cursor ?? fallback;
+  const done = new Set([...state.revealed, ...(state.live?.heard ?? []), ...state.ahead, ...state.checked.keys()]);
+  let w = Math.max(state.live?.end ?? state.cursor ?? fallback, (state.ahead.at(-1) ?? -1) + 1);
   while (done.has(w)) w++;
   set({ hinted: new Set([...state.hinted, w]), revealed: new Set([...state.revealed, w]) });
 }

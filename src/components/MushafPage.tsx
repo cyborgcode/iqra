@@ -69,12 +69,9 @@ function usePageText(page: number, corpus: Corpus | null): PageText | null {
 }
 
 export interface PageView {
-  /** Words being recited, heard provisionally (lit, and shown in "recite from memory"). */
+  /** Words being recited, heard provisionally (lit, and revealed in "recite from memory"). */
   live: ReadonlySet<number>;
-  /**
-   * Words the reciter's voice has gone on to, not heard yet: lit too, but in "recite from memory" only
-   * where they are, without showing them.
-   */
+  /** Words the reciter's voice has gone on to, not heard yet: lit too, and revealed in "recite from memory". */
   ahead: ReadonlySet<number>;
   /** Words of the phrase being recited already checked, provisionally: shown before the book's marks. */
   checked: ReadonlyMap<number, WordMark>;
@@ -333,15 +330,18 @@ function AyahWords({ ayah, view, peek, labels }: { ayah: PageAyah; view: PageVie
     }
     const w = ayah.firstWord === null ? null : ayah.firstWord + token.index;
     const checked = w === null ? undefined : view.checked.get(w);
-    const mark = checked ?? (w === null ? undefined : marks.words.get(w));
-    const heard = w !== null && view.live.has(w);
-    const live = heard || (w !== null && view.ahead.has(w));
-    const masked = view.memorize && !peek && (w === null || !view.revealed.has(w)) && !heard && !checked;
+    // Being recited now, not checked yet: heard by the model, or the voice has gone on to it.
+    const current = w !== null && !checked && (view.live.has(w) || view.ahead.has(w));
+    // With the text shown it lights up; hidden ("recite from memory"), it is revealed as it is said, in
+    // the text's own colour until it is checked.
+    const live = current && !view.memorize;
+    const mark = checked ?? (current || w === null ? undefined : marks.words.get(w));
+    const masked = view.memorize && !peek && (w === null || !view.revealed.has(w)) && !current && !checked;
     out.push(
       <Word
         key={i}
         text={token.text}
-        mark={live ? undefined : mark}
+        mark={mark}
         live={live}
         next={w !== null && w === view.next}
         masked={masked}

@@ -256,8 +256,10 @@ and the model checks it in parallel; a mistake may show a moment late
   one more at a time (ten looks a second), so that catching up runs along the words rather than jumping; never
   in a pause (silence is not counted). Within a phrase, not past the end of its ayah (a reciter may hold its
   last word); a new phrase, after a pause, goes on into the next ayah at once, without waiting for the last
-  phrase's transcription. In "Recite from memory" a hidden word's band lights up while you say it, without
-  showing it; the word shows once the model has heard it.
+  phrase's transcription, and from the first transcript that finds you, before your first phrase is done. In
+  "Recite from memory" the words are revealed as you say them, in the text's own colour, and coloured only once
+  checked: green (correct), red (said differently) or outlined in amber (missed); a word you skip stays shown
+  until it is marked missed.
 - **Checked as you go.** The words a provisional transcript has gone past (all but the last, which may be cut
   off mid-word) turn green at once; a word read wrong, left out, or skipped before the phrase (once two words after
   it are heard) shows once two transcripts in a row agree on it, so that one misheard transcript never shows a
@@ -271,14 +273,16 @@ words that fit ([`src/lib/recitation/tracker.ts`](src/lib/recitation/tracker.ts)
 often misheard: as 1:7 began, «صِرَاطًا لَا» put «لَا» on 2:2, the next page, which turned there and back.
 
 On the page a word being said lights up with a band that sweeps in from the right, in reading direction, and
-fades once it is passed; marks fade in (none of it moves when the system asks for reduced motion).
+fades once it is passed; a hidden word's band fades into the word; marks fade in (none of it moves when the system
+asks for reduced motion).
 
 Measured the same way: words light up 0.3 s sooner on average than with lighting on the model's word alone, and
 are marked 2.4 s (at 1.6×) to 3.8 s (at normal speed) sooner than once their phrase is finished, up to 13 s in the
-long 1:7; a word skipped is marked missed 4 s sooner. With the text hidden, the band of the word being said
-reaches each word 0.6 s (normal speed) to 0.9 s (1.6×) sooner on average than the model's hearing it, up to
-2.5 s. In 9 recitations of Al-Fatiha (5 with the text hidden, 4 shown) every word ended correct, none was shown
-wrong, none went dark again once lit, and no two lit up together.
+long 1:7; a word skipped is marked missed 4 s sooner. With the text hidden, each word is revealed 0.67 s (1.6×)
+to 0.7 s (normal speed) sooner on average than once the model has heard it, up to 2.2 s, and was then checked and
+marked correct. In these recitations of Al-Fatiha, hidden and shown, no word was shown wrong, hidden again or
+dark again once shown, and no two lit up together but the first two, which the first transcript to find the reciter
+hears together.
 
 ### Mistake detection
 

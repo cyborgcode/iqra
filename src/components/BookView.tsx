@@ -241,8 +241,10 @@ export function BookView({ page }: { page: number }) {
   }, [rec.phase]);
 
   const view: PageView = useMemo(() => {
-    // Lit: the word the model heard last (still being said), and the ones the voice has gone on to.
-    const heard = (rec.live?.heard ?? []).filter((w) => !rec.checked.has(w));
+    // Lit: the words of the phrase being recited not checked yet (the last still being said, perhaps
+    // misheard so far), and the ones the voice has gone on to.
+    const span = rec.live ? Array.from({ length: rec.live.end - rec.live.start }, (_, i) => rec.live!.start + i) : [];
+    const heard = span.filter((w) => !rec.checked.has(w));
     return {
       live: new Set(heard),
       ahead: new Set(rec.ahead.filter((w) => !rec.checked.has(w))),
