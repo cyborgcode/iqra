@@ -2,9 +2,10 @@ import { useSyncExternalStore } from "react";
 import { asr } from "../lib/asr/client";
 import { RecorderError, startRecording, type RecorderHandle, type RecorderProblem } from "../lib/audio/recorder";
 import { LiveTranscriber } from "../lib/recitation/live";
+import { MAX_AHEAD, Pace, ayahEnd, checkedMarks, wordsAhead } from "../lib/recitation/optimistic";
 import { collapseLoops } from "../lib/recitation/transcript";
 import type { OptionalPhrase } from "../lib/recitation/phrases";
-import { Tracker, type BookMarks, type LiveView, type TrackEvent } from "../lib/recitation/tracker";
+import { Tracker, type BookMarks, type LiveView, type TrackEvent, type WordMark } from "../lib/recitation/tracker";
 import { loadText } from "./text";
 
 /**
@@ -48,6 +49,10 @@ export interface RecitationState {
   cursor: number | null;
   /** Provisional position of the phrase being recited. */
   live: LiveView | null;
+  /** Words the reciter's voice has gone on to, ahead of what the model heard (see optimistic.ts). */
+  ahead: readonly number[];
+  /** Words of the phrase being recited already checked, provisionally (see optimistic.ts). */
+  checked: ReadonlyMap<number, WordMark>;
   /** An ayah chosen with "recite from this ayah" (ayah index), used by the next recitation. */
   startAyah: number | null;
   /** The summary sheet being shown, if any. */
@@ -79,6 +84,8 @@ let state: RecitationState = {
   startedAt: 0,
   cursor: null,
   live: null,
+  ahead: [],
+  checked: new Map(),
   startAyah: null,
   summary: null,
   lastSummary: null,
@@ -112,9 +119,15 @@ export function onLevel(listener: (rms: number) => void): () => void {
   return () => levelListeners.delete(listener);
 }
 
+/** Nothing provisional: the phrase being recited is finished, or none has been heard. */
+const NO_LIVE = { live: null, ahead: [], checked: new Map() } satisfies Partial<RecitationState>;
+
 interface Session {
   tracker: Tracker;
   live: LiveTranscriber;
+  pace: Pace;
+  /** The latest provisional transcript of the phrase being recited, and where in the recording it ends. */
+  preview: { index: number; view: LiveView; end: number } | null;
   handle: RecorderHandle | null;
   timer: ReturnType<typeof setInterval> | null;
   hint: () => readonly [number, number] | null;
@@ -133,7 +146,26 @@ function afterEvent(s: Session, event: TrackEvent) {
     return;
   }
   s.firstAyah ??= s.tracker.span ? s.tracker.corpus.ayahOfWord[s.tracker.span[0]]! : null;
-  set({ cursor: s.tracker.cursor, live: null, revealed: new Set([...s.tracker.sessionWords, ...state.hinted]), version: state.version + 1 });
+  set({ cursor: s.tracker.cursor, ...NO_LIVE, revealed: new Set([...s.tracker.sessionWords, ...state.hinted]), version: state.version + 1 });
+}
+
+/**
+ * The words the reciter's voice has gone on to since the last word the model heard (or since the last
+ * finished phrase, before any is heard in this one). They stay lit until the model has heard the
+ * phrase further, or it is finished. Within the ayah: reciters pause between ayahs, and may hold the
+ * end of one (a long madd), which must not light the next.
+ */
+function wordsAheadOf(s: Session): readonly number[] {
+  const cursor = s.tracker.cursor;
+  if (cursor === null) return [];
+  const corpus = s.tracker.corpus;
+  const heard = s.preview?.view.heard ?? [];
+  const last = heard.length ? heard.at(-1)! : cursor - 1;
+  const since = heard.length ? s.preview!.end : s.live.phraseStart;
+  const until = ayahEnd(corpus, heard.length ? last : cursor);
+  const fresh = wordsAhead(corpus, last, s.live.speechSince(since), s.pace.secondsPerLetter, until);
+  const words = [...new Set([...state.ahead.filter((w) => w > last && w <= last + MAX_AHEAD && w < until), ...fresh])].sort((a, b) => a - b);
+  return words.length === state.ahead.length && words.every((w, i) => w === state.ahead[i]) ? state.ahead : words;
 }
 
 export interface StartOptions {
@@ -148,12 +180,23 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
     set({ error: { problem: "nowasm" } });
     return;
   }
-  set({ phase: "starting", error: null, summary: null, live: null, cursor: null, revealed: new Set(), hinted: new Set() });
+  set({ phase: "starting", error: null, summary: null, ...NO_LIVE, cursor: null, revealed: new Set(), hinted: new Set() });
   try {
     const text = await loadText();
     const tracker = new Tracker(text.index, marks, threshold);
     if (state.startAyah !== null) tracker.startAt(text.corpus.ayahStart[state.startAyah]!);
-    const s: Session = { tracker, live: null!, handle: null, timer: null, hint, limitReached: false, firstAyah: state.startAyah, texts: [] };
+    const s: Session = {
+      tracker,
+      live: null!,
+      pace: new Pace(text.corpus),
+      preview: null,
+      handle: null,
+      timer: null,
+      hint,
+      limitReached: false,
+      firstAyah: state.startAyah,
+      texts: [],
+    };
     // A request the model cannot answer ends the recitation with the reason, rather than leaving the
     // book waiting for words that never come.
     const recognize = (segment: Float32Array, partial: boolean) =>
@@ -166,12 +209,28 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
       );
     s.live = new LiveTranscriber(recognize, {
       maxSegmentSeconds: MAX_PHRASE_SECONDS,
-      onFinal: (_, transcript) => {
+      onFinal: (_, transcript, speech) => {
         s.texts.push(transcript);
-        afterEvent(s, tracker.commit(transcript, s.hint()));
+        const event = tracker.commit(transcript, s.hint());
+        if ("start" in event) s.pace.add(speech, event.start, event.end);
+        // What was shown stays until the next transcript, unless this marked words (see afterEvent): a
+        // short sound taken for a phrase of its own changes nothing.
+        s.preview = null;
+        afterEvent(s, event);
       },
-      onPartial: (_, transcript) => {
-        if (session === s && state.phase === "listening") set({ live: tracker.preview(transcript, s.hint()) });
+      onPartial: (index, transcript, end) => {
+        if (session !== s || state.phase !== "listening") return;
+        const before = s.preview?.index === index ? s.preview.view : null;
+        const placed = tracker.preview(transcript, s.hint());
+        // A transcript that places nothing changes nothing: it is often one cut off mid-word.
+        if (!placed) return;
+        // Nor does a word of the phrase stop being lit when one transcript hears it differently.
+        const view: LiveView = before
+          ? { ...placed, start: Math.min(before.start, placed.start), end: Math.max(before.end, placed.end), heard: [...new Set([...before.heard, ...placed.heard])].sort((a, b) => a - b) }
+          : placed;
+        const checked = checkedMarks(placed.settled, before?.settled ?? new Map(), before ? state.checked : new Map());
+        s.preview = { index, view, end };
+        set({ live: view, checked, ahead: wordsAheadOf(s) });
       },
       onIdle: () => {
         if (session === s && s.handle) s.live.update(s.handle.samples());
@@ -191,7 +250,10 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
       return;
     }
     s.timer = setInterval(() => {
-      if (s.handle) s.live.update(s.handle.samples());
+      if (!s.handle) return;
+      s.live.update(s.handle.samples());
+      const ahead = wordsAheadOf(s);
+      if (ahead !== state.ahead) set({ ahead });
     }, UPDATE_MS);
     set({ phase: "listening", startedAt: performance.now(), cursor: tracker.cursor });
   } catch (error) {
@@ -218,7 +280,7 @@ export async function stopRecitation(): Promise<void> {
     const summary = summarize(s);
     set({
       phase: "idle",
-      live: null,
+      ...NO_LIVE,
       cursor: s.tracker.cursor,
       startAyah: null,
       summary,
@@ -229,7 +291,7 @@ export async function stopRecitation(): Promise<void> {
     });
   } catch (error) {
     session = null;
-    set({ phase: "idle", live: null, error: { problem: "model", detail: error instanceof Error ? error.message : String(error) } });
+    set({ phase: "idle", ...NO_LIVE, error: { problem: "model", detail: error instanceof Error ? error.message : String(error) } });
   }
 }
 
@@ -239,7 +301,7 @@ function recognitionFailed(s: Session, error: unknown) {
   if (s.timer) clearInterval(s.timer);
   s.handle?.cancel();
   s.handle = null;
-  set({ phase: "idle", live: null, error: { problem: "recognition", detail: error instanceof Error ? error.message : String(error) } });
+  set({ phase: "idle", ...NO_LIVE, error: { problem: "recognition", detail: error instanceof Error ? error.message : String(error) } });
 }
 
 /** Stops listening and forgets this recitation's audio (its marks so far stay). */
@@ -248,7 +310,7 @@ export function cancelRecitation() {
   session = null;
   if (s?.timer) clearInterval(s.timer);
   s?.handle?.cancel();
-  set({ phase: "idle", live: null });
+  set({ phase: "idle", ...NO_LIVE });
 }
 
 function summarize(s: Session): Summary | null {

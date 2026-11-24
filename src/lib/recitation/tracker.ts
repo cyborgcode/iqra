@@ -54,6 +54,12 @@ export interface LiveView {
   end: number;
   /** Corpus words heard so far in this segment. */
   heard: number[];
+  /**
+   * The words of the segment already said, as they read so far: all but the one still being said (the
+   * transcript may have cut it off mid-word). Correct, wrong or missed, as the finished segment would
+   * most likely mark them.
+   */
+  settled: ReadonlyMap<number, WordMark>;
 }
 
 interface Heard {
@@ -82,9 +88,10 @@ const MAX_BACK = 80;
 /** Words left at the end of an ayah when the reciter stops that count as missed. */
 const MAX_UNFINISHED = 2;
 /**
- * A preview this many words past where the reciter is expected, or further, needs as many words that
- * fit: a provisional transcript is often cut off mid-word and misheard, and a word or two fitting
- * further on (a common one, like «لَا») is more often that than a skipped ayah.
+ * A preview this many words past where the reciter is expected, or further, or before it, needs as many
+ * words that fit: a provisional transcript is often cut off mid-word and misheard, and a word or two
+ * fitting elsewhere (a common one, like «لَا» or «اللَّهِ») is more often that than a skipped ayah or a
+ * repeated phrase, which the finished phrase will show anyway.
  */
 const PREVIEW_LEAP = 3;
 
@@ -337,13 +344,30 @@ export class Tracker {
     } else {
       choice = this.choose(heard.keys, (core) => this.localPlacement(core), null);
       if (!choice?.placement || choice.placement.matched === 0) return null;
-      // A leap ahead waits for more of the phrase, rather than turn the page on a guess and back.
+      // A leap waits for more of the phrase, rather than light (or turn the page to) a guess and go back.
       const { start, matched } = choice.placement;
-      if (start - this.cursor >= PREVIEW_LEAP && matched < PREVIEW_LEAP) return null;
+      if ((start - this.cursor >= PREVIEW_LEAP || start < this.cursor) && matched < PREVIEW_LEAP) return null;
     }
     const p = choice.placement!;
     const words = p.ops.flatMap((op) => (op.type === "match" && op.similarity >= this.threshold ? op.words : []));
-    return { start: p.start, end: p.end, heard: words };
+    const settled = new Map<number, WordMark>();
+    const raw = heard.raw.slice(choice.from);
+    for (const op of p.ops) {
+      if (op.type === "match") {
+        // The last word heard may be cut off: it is still being said.
+        if (op.heard[1] >= choice.size) continue;
+        const ok = op.similarity >= this.threshold;
+        for (const w of op.words) settled.set(w, { status: ok ? "correct" : "wrong", similarity: op.similarity, ...(ok ? {} : { heard: raw.slice(op.heard[0], op.heard[1]).join(" ") }) });
+      } else if (op.type === "miss") {
+        settled.set(op.word, { status: "missed", similarity: 0 });
+      }
+    }
+    // Words skipped between where the reciter was and this phrase, as the finished phrase will mark them,
+    // once two words of it are heard.
+    if (this.cursor !== null && p.start > this.cursor && p.matched >= 2) {
+      for (let w = this.cursor; w < p.start; w++) if (!this.sessionWords.has(w)) settled.set(w, { status: "missed", similarity: 0 });
+    }
+    return { start: p.start, end: p.end, heard: words, settled };
   }
 
   /**

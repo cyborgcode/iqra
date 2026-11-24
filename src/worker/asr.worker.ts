@@ -203,8 +203,8 @@ function tokenBudget(samples: number): number {
 }
 
 /**
- * One phrase's text. In a short window when the encoder takes them, from the phrase's last provisional
- * transcription when there is one. A finished phrase that comes back repeating itself is transcribed
+ * One phrase's text. In a short window when the encoder takes them; a provisional one from the phrase's
+ * last provisional transcription when there is one. A finished phrase that comes back repeating itself is transcribed
  * again in the full window, as the model was trained, where a repeat is the reciter's (some ayahs
  * follow one that reads the same) rather than the model's; a provisional one keeps what came before
  * the loop, as it will be replaced anyway.
@@ -222,7 +222,10 @@ async function recognize(segment: Float32Array, partial: boolean): Promise<strin
 
   let result: Transcription | null = null;
   if (loaded.shortWindows) {
-    const withDraft = loaded.drafts && draft !== null;
+    // Only for provisional transcriptions: a finished phrase, which marks the book, is transcribed afresh.
+    // Starting from a draft is faster but follows the draft where two readings are close (on 94 ayahs,
+    // 3 more words of 420 wrong), and its words have been checked provisionally already.
+    const withDraft = partial && loaded.drafts && draft !== null;
     try {
       result = await inShort(withDraft);
     } catch (error) {

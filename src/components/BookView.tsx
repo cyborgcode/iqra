@@ -240,17 +240,21 @@ export function BookView({ page }: { page: number }) {
     return () => void lock?.release().catch(() => {});
   }, [rec.phase]);
 
-  const view: PageView = useMemo(
-    () => ({
-      live: new Set(rec.live?.heard ?? []),
-      next: rec.phase === "idle" ? null : (rec.live?.end ?? rec.cursor),
+  const view: PageView = useMemo(() => {
+    // Lit: the word the model heard last (still being said) and the ones the voice has gone on to, but
+    // not in "recite from memory", where a word shows only once the model has heard it.
+    const ahead = settings.memorize ? [] : rec.ahead;
+    const heard = (rec.live?.heard ?? []).filter((w) => !rec.checked.has(w));
+    return {
+      live: new Set([...heard, ...ahead]),
+      checked: rec.checked,
+      next: rec.phase === "idle" ? null : ahead.length ? ahead.at(-1)! + 1 : (rec.live?.end ?? rec.cursor),
       memorize: settings.memorize,
       revealed: rec.revealed,
       hinted: rec.hinted,
       version: rec.version,
-    }),
-    [rec.live, rec.phase, rec.cursor, settings.memorize, rec.revealed, rec.hinted, rec.version],
-  );
+    };
+  }, [rec.live, rec.ahead, rec.checked, rec.phase, rec.cursor, settings.memorize, rec.revealed, rec.hinted, rec.version]);
 
   const onFocused = useCallback(() => clearFocusAyah(), []);
 

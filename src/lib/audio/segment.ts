@@ -42,7 +42,7 @@ export interface Segmentation {
 
 const FRAME_SECONDS = 0.02;
 /** Frames below this are treated as digital silence and ignored when estimating the noise floor. */
-const DIGITAL_SILENCE_DBFS = -90;
+export const DIGITAL_SILENCE_DBFS = -90;
 /** Below this the whole recording is treated as silence (dBFS of the loudest frames). */
 const SILENCE_DBFS = -55;
 /** Speech/silence threshold, as a fraction of the way from the noise floor to the loud level. */

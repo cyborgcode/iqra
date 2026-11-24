@@ -1,13 +1,17 @@
-import { FRAME_SAMPLES_16K, frameLevels, levelThreshold, segmentByPauses, type SegmentOptions } from "../audio/segment";
+import { DIGITAL_SILENCE_DBFS, FRAME_SAMPLES_16K, frameLevels, levelThreshold, segmentByPauses, type SegmentOptions } from "../audio/segment";
 
 export interface LiveOptions extends SegmentOptions {
-  /** A finished segment's text, delivered in order as soon as it is transcribed. */
-  onFinal?: (index: number, text: string) => void;
   /**
-   * A provisional text of the segment still being recited (`index` is the index it will get). Partial
-   * transcriptions are only requested while no finished segment is waiting, so they never delay one.
+   * A finished segment's text, delivered in order as soon as it is transcribed, with the seconds of
+   * speech in it.
    */
-  onPartial?: (index: number, text: string) => void;
+  onFinal?: (index: number, text: string, speech: number) => void;
+  /**
+   * A provisional text of the segment still being recited (`index` is the index it will get), from
+   * the recording up to sample `end`. Partial transcriptions are only requested while no finished
+   * segment is waiting, so they never delay one.
+   */
+  onPartial?: (index: number, text: string, end: number) => void;
   /**
    * The model has nothing left to do: call `update` again now (rather than at the next tick), so the
    * phrase being recited is transcribed again as soon as it can be.
@@ -26,6 +30,12 @@ const PARTIAL_MIN_SECONDS = 0.5;
 const SPEAKING_GAP_SECONDS = 0.2;
 /** After this long a pause ends even a short phrase, which a shorter pause would join to the next. */
 const LONG_PAUSE_SECONDS = 1;
+/**
+ * Digital silence kept at most before the sound of a phrase. A microphone starting up records zeros
+ * for a moment, which the threshold for speech, still unsettled, can take in; Whisper, given more than
+ * half a second of them before the first word, may mishear it.
+ */
+const LEAD_SECONDS = 0.2;
 
 /**
  * Transcribes a recitation while it is being recorded. Each time `update` is called with everything
@@ -41,6 +51,8 @@ export class LiveTranscriber {
   private settled = 0;
   /** Frame levels of the whole recording so far, so the speech/silence threshold is global. */
   private levels: number[] = [];
+  /** The level that counts as speech, as of the last look at the recording. */
+  private speechLevel: number | null = null;
   /** Requests to the model not answered yet (finished segments and partials). */
   private inFlight = 0;
   private partialIndex = -1;
@@ -63,8 +75,9 @@ export class LiveTranscriber {
     if (this.inFlight === 0 && !this.finished) this.options.onIdle?.();
   }
 
-  private send(segment: Float32Array) {
+  private send(segment: Float32Array, at: number) {
     const index = this.parts.length;
+    const speech = this.speechBetween(at, at + segment.length);
     this.inFlight++;
     const part = this.transcribe(segment, false);
     const done = () => {
@@ -77,7 +90,7 @@ export class LiveTranscriber {
     this.delivered = this.delivered.then(async () => {
       const text = await part.catch(() => "");
       this.finalsDelivered = index + 1;
-      onFinal?.(index, text);
+      onFinal?.(index, text, speech);
     });
   }
 
@@ -89,7 +102,7 @@ export class LiveTranscriber {
     this.transcribe(segment, true).then(
       (text) => {
         // Stale once that segment (or a later one) is final.
-        if (!this.finished && this.finalsDelivered <= index && this.parts.length <= index) this.options.onPartial?.(index, text);
+        if (!this.finished && this.finalsDelivered <= index && this.parts.length <= index) this.options.onPartial?.(index, text, start + segment.length);
         this.answered();
       },
       () => this.answered(),
@@ -103,9 +116,17 @@ export class LiveTranscriber {
    */
   private sendFinished(tail: Float32Array, base: number, segments: readonly { start: number; end: number }[]) {
     segments.forEach((s, i) => {
-      const start = i === 0 && this.parts.length === this.partialIndex ? Math.max(0, Math.min(s.start, this.partialStart - base)) : s.start;
-      this.send(tail.slice(start, s.end));
+      const earliest = i === 0 && this.parts.length === this.partialIndex ? Math.max(0, Math.min(s.start, this.partialStart - base)) : s.start;
+      const start = Math.min(this.soundFrom(base + earliest), base + s.end) - base;
+      this.send(tail.slice(start, s.end), base + start);
     });
+  }
+
+  /** `start`, or later if digital silence follows it: at most LEAD_SECONDS of it before the sound. */
+  private soundFrom(start: number): number {
+    let f = Math.floor(start / FRAME_SAMPLES_16K);
+    while (f < this.levels.length && this.levels[f]! < DIGITAL_SILENCE_DBFS) f++;
+    return Math.max(start, f * FRAME_SAMPLES_16K - Math.round(LEAD_SECONDS * (this.options.sampleRate ?? 16000)));
   }
 
   private threshold(samples: Float32Array): number | null {
@@ -114,7 +135,29 @@ export class LiveTranscriber {
       const start = this.levels.length * FRAME_SAMPLES_16K;
       for (const v of frameLevels(samples.subarray(start, frames * FRAME_SAMPLES_16K))) this.levels.push(v);
     }
-    return levelThreshold(this.levels);
+    this.speechLevel = levelThreshold(this.levels);
+    return this.speechLevel;
+  }
+
+  /** Seconds of speech (by the level that counts as speech now) between two samples of the recording. */
+  private speechBetween(from: number, to: number): number {
+    const level = this.speechLevel;
+    if (level === null) return 0;
+    let frames = 0;
+    for (let f = Math.max(0, Math.floor(from / FRAME_SAMPLES_16K)); f < Math.min(this.levels.length, Math.ceil(to / FRAME_SAMPLES_16K)); f++) {
+      if (this.levels[f]! >= level) frames++;
+    }
+    return (frames * FRAME_SAMPLES_16K) / (this.options.sampleRate ?? 16000);
+  }
+
+  /** Seconds of speech recorded since `sample` (up to the last `update`). */
+  speechSince(sample: number): number {
+    return this.speechBetween(sample, Infinity);
+  }
+
+  /** Where the phrase now being recited begins: the end of the last finished one. */
+  get phraseStart(): number {
+    return this.committed;
   }
 
   /** Call periodically during recording with all samples so far (a view is fine; it is not kept). */
@@ -144,7 +187,8 @@ export class LiveTranscriber {
     if (!this.options.onPartial || !open || this.inFlight > 0 || trailingSilence >= SPEAKING_GAP_SECONDS) return;
     const index = this.parts.length;
     // A phrase keeps the earliest start it was heard from (see sendFinished).
-    const start = index === this.partialIndex ? Math.max(base, Math.min(base + open.start, this.partialStart)) : base + open.start;
+    const earliest = index === this.partialIndex ? Math.max(base, Math.min(base + open.start, this.partialStart)) : base + open.start;
+    const start = Math.min(this.soundFrom(earliest), samples.length);
     const length = samples.length - start;
     if (length < PARTIAL_MIN_SECONDS * rate) return;
     if (index === this.partialIndex && length - this.partialLength < PARTIAL_GROWTH_SECONDS * rate) return;

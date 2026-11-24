@@ -197,6 +197,40 @@ describe("Tracker: following a recitation through the book", () => {
     expect(u.preview(say(112, 1), page(1))?.start).toBe(firstWord(112, 1));
   });
 
+  it("checks the words of the phrase being recited as it goes, all but the one still being said", () => {
+    const t = tracker();
+    for (const ayah of FATIHA.slice(0, 6)) t.commit(ayah, page(1));
+    const [w0, w1, w2, w3, w4] = words(1, 7);
+    const status = (text: string) => [...(t.preview(text, page(1))?.settled ?? [])].map(([w, m]) => [w, m.status]);
+    expect(status("صِرَاطَ")).toEqual([]);
+    expect(status("صِرَاطَ الَّذِينَ أَنْعَمْتَ")).toEqual([
+      [w0, "correct"],
+      [w1, "correct"],
+    ]);
+    // A wrong word and a skipped one show before the phrase is finished; nothing is marked yet.
+    expect(status("صِرَاطَ الَّذِينَ قُلْتَ عَلَيْهِمْ غَيْرِ")).toEqual([
+      [w0, "correct"],
+      [w1, "correct"],
+      [w2, "wrong"],
+      [w3, "correct"],
+    ]);
+    expect(status("صِرَاطَ الَّذِينَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ")).toEqual([
+      [w0, "correct"],
+      [w1, "correct"],
+      [w2, "missed"],
+      [w3, "correct"],
+      [w4, "correct"],
+    ]);
+    expect(t.marks.words.has(w0!)).toBe(false);
+    // A word skipped at the start of the phrase, once two words after it are heard.
+    expect(status("الَّذِينَ")).toEqual([]);
+    expect(status("الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ")).toEqual([
+      [w1, "correct"],
+      [w2, "correct"],
+      [w0, "missed"],
+    ]);
+  });
+
   it("keeps a preview with the reciter when a word cut off mid-way fits only further on", () => {
     const t = tracker();
     for (const ayah of FATIHA.slice(0, 6)) t.commit(ayah, page(1));
@@ -205,6 +239,11 @@ describe("Tracker: following a recitation through the book", () => {
     expect(t.preview("صِرَاطَ الَّذِينَ", page(1))?.heard).toEqual(words(1, 7).slice(0, 2));
     // A reciter who skipped ahead shows there once three words fit.
     expect(t.preview("ذَلِكَ الْكِتَابُ لَا رَيْبَ", page(1))?.heard).toEqual(words(2, 2).slice(0, 4));
+    // Nor does one misheard word go back: «اللَّهُ» for the start of 1:3 fits 1:2.
+    const u = tracker();
+    for (const ayah of FATIHA.slice(0, 2)) u.commit(ayah, page(1));
+    expect(u.preview("اللَّهُ", page(1))).toBeNull();
+    expect(u.preview("الرَّحْمَنُ", page(1))?.heard).toEqual(words(1, 3).slice(0, 1));
   });
 
   it("starts where asked ('recite from here')", () => {

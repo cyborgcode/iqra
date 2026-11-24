@@ -69,8 +69,10 @@ function usePageText(page: number, corpus: Corpus | null): PageText | null {
 }
 
 export interface PageView {
-  /** Words heard provisionally in the phrase being recited. */
+  /** Words being recited (lit): heard provisionally, or that the reciter's voice has gone on to. */
   live: ReadonlySet<number>;
+  /** Words of the phrase being recited already checked, provisionally: shown before the book's marks. */
+  checked: ReadonlyMap<number, WordMark>;
   /** The next word expected from the reciter, if known. */
   next: number | null;
   /** "Recite from memory": words not in `revealed` are hidden. */
@@ -325,9 +327,10 @@ function AyahWords({ ayah, view, peek, labels }: { ayah: PageAyah; view: PageVie
       continue;
     }
     const w = ayah.firstWord === null ? null : ayah.firstWord + token.index;
-    const mark = w === null ? undefined : marks.words.get(w);
+    const checked = w === null ? undefined : view.checked.get(w);
+    const mark = checked ?? (w === null ? undefined : marks.words.get(w));
     const live = w !== null && view.live.has(w);
-    const masked = view.memorize && !peek && (w === null || !view.revealed.has(w)) && !live;
+    const masked = view.memorize && !peek && (w === null || !view.revealed.has(w)) && !live && !checked;
     out.push(
       <Word
         key={i}

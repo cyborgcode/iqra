@@ -134,7 +134,9 @@ A service worker ([`src/sw.js`](src/sw.js)) keeps the site's own files on the de
    clip. The recording is cut at every pause of at least 0.35 s, so each segment is about one ayah or phrase;
    while following, a segment longer than 15 s (a long ayah with no pause) is cut at its quietest point, so the
    book is never far behind. A phrase keeps the earliest start it was heard from: the level that counts as speech
-   rises as a recording begins and the voice is heard, and would otherwise cut off a soft first sound.
+   rises as a recording begins and the voice is heard, and would otherwise cut off a soft first sound. But it
+   keeps at most 0.2 s of digital silence before its sound: a microphone starting up records zeros for a moment,
+   and with 0.6 s of them before the basmala the model heard «لِسُيِ» for «بِسْمِ».
 4. **Transcribe as you go.** A Web Worker runs the model with Transformers.js: the encoder on WebGPU when the
    device has a real GPU adapter, everything else on multithreaded WebAssembly; if the graphics processor fails,
    it carries on with WebAssembly. The recording is looked at ten times a second and whenever the model is done,
@@ -142,16 +144,18 @@ A service worker ([`src/sw.js`](src/sw.js)) keeps the site's own files on the de
    short to stand alone waits for a longer pause, as it would be joined to the next). Each phrase is first brought
    to a steady loudness (Whisper's input depends on it; a quiet phrase is raised by up to 30 dB). While you are
    reciting and the model has nothing finished to do, it also transcribes the phrase so far, again each time a
-   fifth of a second more has been recited, so the words you are saying light up provisionally, one by one; not in
-   a pause, where the phrase is about to be finished. Each request is made as short as it can be: a window of the
-   phrase's own length rather than 30 s, and a phrase transcribed again as it grows starts from its last text
-   (below). A request may produce at most 45 tokens per second of audio: fully vowelled text
-   takes 5 to 7 tokens a word (measured with the model's tokenizer), so a fast reciter needs about 20. If the
-   model fails, the recitation stops with the reason. Settings shows the engine in use and how long the last
-   phrase took.
-5. **Find and follow.** Each finished segment is placed in the Quran (below) and its words are marked correct,
-   different (wrong) or missed, plus any added words. Marks stay on the book until you clear them; the summary
-   lists the ayahs to look at again and can start you on them.
+   fifth of a second more has been recited; not in a pause, where the phrase is about to be finished. Each
+   request is made as short as it can be: a window of the phrase's own length rather than 30 s, and a provisional
+   transcription starts from the last one of the same phrase (below). A request may produce at most 45 tokens per
+   second of audio: fully vowelled text takes 5 to 7 tokens a word (measured with the model's tokenizer), so a
+   fast reciter needs about 20. If the model fails, the recitation stops with the reason. Settings shows the engine
+   in use and how long the last phrase took.
+5. **Shown as you go, confirmed at the pause.** The book follows your voice and checks your words in parallel,
+   a little behind (below): the word you are saying lights up, the ones the model has heard you go past turn
+   green, or show a mistake, while you recite. Each finished segment is then placed in the Quran (below) and its
+   words are marked correct, different (wrong) or missed, plus any added words, which may correct what was
+   shown. Marks stay on the book until you clear them; the summary lists the ayahs to look at again and can start
+   you on them.
 
 ### A whole page on the screen
 
@@ -221,13 +225,15 @@ changes make a request cost about what its new audio does:
   second time ends decoding there. A finished phrase that came back looped is transcribed again in the full 30 s
   window, where a repeat is the reciter's (some ayahs read the same as the one before, 94:5–6); a provisional one
   keeps what came before the loop, as it is replaced anyway.
-- **Drafts** ([`src/lib/asr/decode.ts`](src/lib/asr/decode.ts)). A phrase transcribed again starts from the tokens
-  $d_1 \dots d_n$ of its last transcription. One run of the decoder over the prompt and the draft gives the
-  model's greedy choice $c_i$ after every prefix; the draft is kept up to the first $i$ where $c_i \ne d_i$, and
-  decoding goes on from there with the keys and values that run computed. Where the model agrees, its tokens are
-  those token-by-token decoding produces, but for near ties: the 8-bit decoder rounds a run of tokens slightly
-  differently from one token at a time (on 160 phrases transcribed at 40, 60, 80 and 100 % of their length, 150
-  texts were identical; the other ten differ in one word, most often the last, cut off mid-way).
+- **Drafts** ([`src/lib/asr/decode.ts`](src/lib/asr/decode.ts)). A provisional transcription starts from the
+  tokens $d_1 \dots d_n$ of the last one of the same phrase. One run of the decoder over the prompt and the draft
+  gives the model's greedy choice $c_i$ after every prefix; the draft is kept up to the first $i$ where
+  $c_i \ne d_i$, and decoding goes on from there with the keys and values that run computed (afresh if not even
+  the first token agrees). Where the model agrees, its tokens are those token-by-token decoding produces, but
+  for near ties: the 8-bit decoder rounds a run of tokens slightly differently from one token at a time (on 160
+  phrases transcribed at 40, 60, 80 and 100 % of their length, 150 texts were identical; the other ten differ in
+  one word, most often the last, cut off mid-way). A finished phrase, which marks the book, is transcribed afresh:
+  from the last draft it was 32 % faster, but on 94 ayahs it got 3 more words of 420 wrong.
 
 Measured in Chromium on WebAssembly (4 threads) with Al-Fatiha recited at its normal speed and at 1.6×: a request
 for up to 4 s of audio took 1.0–1.9 s at first (median 1.3 s) and 0.25–0.7 s with a phrase's own window and drafts
@@ -235,9 +241,34 @@ for up to 4 s of audio took 1.0–1.9 s at first (median 1.3 s) and 0.25–0.7 s
 now takes about 0.15 s (median) and runs 4 to 5 times a second while the reciter speaks: each word lights up on
 its own, 0.3–0.4 s sooner on average than with transcriptions every 0.6 s of new audio (up to 1.25 s sooner).
 
-A live preview that puts the reciter three words or more further on needs as many words that fit
-([`src/lib/recitation/tracker.ts`](src/lib/recitation/tracker.ts)). A transcript cut off mid-word is often misheard:
-as 1:7 began, «صِرَاطًا لَا» put «لَا» on 2:2, the next page, which turned there and back.
+### Shown as you go, confirmed at the pause
+
+Recognition takes time, so the book does not wait for it: it shows the recitation as it goes, assuming it right,
+and the model checks it in parallel; a mistake may show a moment late
+([`src/lib/recitation/optimistic.ts`](src/lib/recitation/optimistic.ts)).
+
+- **Ahead of the model.** While you speak, the words your voice has gone on to since the last word the model
+  heard light up at once, from how long each takes to say: a word $w$ of $\ell_w$ letters lights up once the speech
+  since then reaches $\sum_{v < w} r\,\ell_v + 0.4\, r\,\ell_w$, with $r$ your pace in seconds per letter,
+  measured on your finished phrases (0.15 s until then). At most two words ahead, never across the end of an ayah
+  (reciters pause there, or hold its last word), never in a pause (silence is not counted), and never in "Recite
+  from memory", where a word shows only once it is heard.
+- **Checked as you go.** The words a provisional transcript has gone past (all but the last, which may be cut
+  off mid-word) turn green at once; a word read wrong, left out, or skipped before the phrase (once two words after
+  it are heard) shows once two transcripts in a row agree on it, so that one misheard transcript never shows a
+  mistake that is not there. What is shown stays until the phrase is finished: a transcript that hears less, or
+  places nothing (often one cut off mid-word), changes nothing.
+- **Confirmed at the pause.** The finished phrase, transcribed afresh, marks every word, which may change what
+  was shown.
+
+A live preview that puts the reciter three words or more further on, or before where they are, needs as many
+words that fit ([`src/lib/recitation/tracker.ts`](src/lib/recitation/tracker.ts)). A transcript cut off mid-word is
+often misheard: as 1:7 began, «صِرَاطًا لَا» put «لَا» on 2:2, the next page, which turned there and back.
+
+Measured the same way, against the version before: each word lights up 0.3 s sooner on average and is marked
+2.4 s (at 1.6×) to 3.8 s (at normal speed) sooner, up to 13 s in the long 1:7, which was marked only once
+finished; a word skipped is marked missed 4 s sooner. In 7 recitations of Al-Fatiha every word ended correct, none
+was shown wrong, and none went dark again once lit.
 
 ### Mistake detection
 

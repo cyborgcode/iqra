@@ -205,6 +205,30 @@ describe("LiveTranscriber: partial transcripts", () => {
     expect(-final.start).toBeGreaterThan(3.5);
   });
 
+  it("keeps at most a fifth of a second of the zeros a microphone records as it starts", async () => {
+    // 0.8 s of digital silence, a short noise, then 2 s of voice and a pause with faint noise.
+    const audio = new Float32Array(Math.round(4.5 * SR));
+    let seed = 9;
+    for (let i = Math.round(0.8 * SR); i < audio.length; i++) audio[i] = ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 0.001;
+    for (let i = SR; i < 3 * SR; i++) audio[i] = 0.3 * Math.sin((2 * Math.PI * 200 * i) / SR);
+    const sent: { seconds: number; partial: boolean }[] = [];
+    const live = new LiveTranscriber(
+      async (segment, partial) => {
+        sent.push({ seconds: segment.length / SR, partial });
+        return "";
+      },
+      { onPartial: () => {} },
+    );
+    for (let n = SR / 10; n <= audio.length; n += SR / 10) {
+      live.update(audio.subarray(0, n));
+      await Promise.resolve();
+    }
+    const final = sent.find((s) => !s.partial)!;
+    // The voice and the padding around it, and not the 0.8 s of zeros: at most 0.2 s of them.
+    expect(final.seconds).toBeLessThan(2 + 0.2 + 0.2 + 0.2 + 0.05);
+    expect(final.seconds).toBeGreaterThan(2);
+  });
+
   it("never sends a partial while a finished segment is waiting for the model", async () => {
     vi.useFakeTimers();
     try {

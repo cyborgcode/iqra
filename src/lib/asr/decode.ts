@@ -189,6 +189,15 @@ export async function transcribePhrase({ whisper, tokenizer, processor }: Whispe
   const logits_processor = new LogitsProcessorList();
   if (options.guard) logits_processor.push(new LoopGuard(loops, end));
 
+  // Generation only takes the inputs it lists, and would otherwise run the encoder again.
+  if (!whisper.forward_params.includes("encoder_outputs")) whisper.forward_params.push("encoder_outputs");
+  const generate = async (more: Record<string, unknown>) => {
+    const output = (await whisper.generate({ inputs: input_features, logits_processor, ...more } as unknown as Parameters<typeof whisper.generate>[0])) as Tensor;
+    return (output.tolist() as bigint[][])[0] ?? [];
+  };
+  const afresh = (encoded?: Tensor) =>
+    generate({ language: "arabic", task: "transcribe", max_new_tokens: options.maxTokens, ...(encoded ? { encoder_outputs: encoded } : {}) });
+
   let ids: bigint[];
   let drafted = 0;
   const draft = options.draft?.slice(0, options.maxTokens) ?? [];
@@ -197,30 +206,13 @@ export async function transcribePhrase({ whisper, tokenizer, processor }: Whispe
     const { agreed, next, cache } = await check(whisper, s, encoded, prompt, draft);
     drafted = agreed;
     const prefix = [...prompt, ...draft.slice(0, agreed)];
-    if (next === end || agreed >= options.maxTokens) ids = prefix;
-    else {
-      // Generation only takes the inputs it lists, and would otherwise run the encoder again.
-      if (!whisper.forward_params.includes("encoder_outputs")) whisper.forward_params.push("encoder_outputs");
-      const output = (await whisper.generate({
-        inputs: input_features,
-        encoder_outputs: encoded,
-        decoder_input_ids: [prefix],
-        past_key_values: cache,
-        max_new_tokens: options.maxTokens - agreed,
-        logits_processor,
-      } as unknown as Parameters<typeof whisper.generate>[0])) as Tensor;
-      ids = (output.tolist() as bigint[][])[0] ?? [];
-    }
-  } else {
-    const output = (await whisper.generate({
-      inputs: input_features,
-      language: "arabic",
-      task: "transcribe",
-      max_new_tokens: options.maxTokens,
-      logits_processor,
-    } as unknown as Parameters<typeof whisper.generate>[0])) as Tensor;
-    ids = (output.tolist() as bigint[][])[0] ?? [];
-  }
+    if (agreed === 0) {
+      // Not even the first word: nothing to keep, and the check's state is the prompt's run together
+      // with a wrong draft (the 8-bit decoder rounds a run as a whole), so decode as without a draft.
+      ids = await afresh(encoded);
+    } else if (next === end || agreed >= options.maxTokens) ids = prefix;
+    else ids = await generate({ encoder_outputs: encoded, decoder_input_ids: [prefix], past_key_values: cache, max_new_tokens: options.maxTokens - agreed });
+  } else ids = await afresh();
 
   const decode = (tokens: bigint[]) => tokenizer.decode(tokens, { skip_special_tokens: true }).trim();
   const isText = (t: bigint) => t < BigInt(end);
