@@ -63,6 +63,11 @@ class Pager {
     private readonly options: { current: PagerOptions },
   ) {}
 
+  /** The page the running slide leads to, if one is under way and turns. */
+  get destination(): number | null {
+    return this.slideAnimation ? this.dest : null;
+  }
+
   private width(): number {
     return (this.track.current?.clientWidth ?? 0) + PAGER_GAP;
   }

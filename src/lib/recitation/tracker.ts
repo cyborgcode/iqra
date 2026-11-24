@@ -94,6 +94,13 @@ const MAX_UNFINISHED = 2;
  * repeated phrase, which the finished phrase will show anyway.
  */
 const PREVIEW_LEAP = 3;
+/**
+ * A phrase that fits nowhere near the reciter is taken for a jump elsewhere only if this many of its
+ * words fit there, in one place only, or if it fits on a page the reader has turned to: two common
+ * words, often a misheard fragment (the end of an ayah cut off, «وَإِذَا مَا»), fit in many places,
+ * and would send the book away from the reciter.
+ */
+const JUMP_WORDS = 3;
 
 export function heardWords(text: string): Heard {
   const raw = collapseLoops(text)
@@ -220,12 +227,26 @@ export class Tracker {
     return ids;
   }
 
+  /** Whether a placement starts on the open page. */
+  private onPage(p: Placement, hint: readonly [number, number] | null): boolean {
+    return !!hint && p.start >= hint[0] && p.start < hint[1];
+  }
+
+  /** It can only be there (see JUMP_WORDS). */
+  private distinct(choice: Choice, hint: readonly [number, number] | null): boolean {
+    const p = choice.placement!;
+    if (p.matched >= JUMP_WORDS && !choice.ambiguous) return true;
+    // The reader has turned to another page than the one they were reciting, to recite from it.
+    const away = !!hint && this.cursor !== null && (this.cursor < hint[0] || this.cursor > hint[1]);
+    return away && this.onPage(p, hint);
+  }
+
   /** Enough of the segment fits: at least half of its words and two of them, or a short segment on the open page. */
   private confident(choice: Choice, hint: readonly [number, number] | null): boolean {
     const p = choice.placement;
     if (!p || p.matched === 0) return false;
     if (p.matched >= 2 && p.matched >= choice.size * 0.5) return true;
-    return choice.size <= 2 && !!hint && p.start >= hint[0] && p.start < hint[1];
+    return choice.size <= 2 && this.onPage(p, hint);
   }
 
   private setMark(word: number, mark: WordMark) {
@@ -318,8 +339,8 @@ export class Tracker {
 
     // Not where the reciter was: look everywhere.
     const far = this.choose(heard.keys, (core) => this.globalPlacement(core, hint), hint);
-    // A jump needs to fit clearly better than the best nearby reading.
-    if (far?.placement && this.confident(far, hint) && far.placement.matched >= (local?.placement?.matched ?? 0) + 2) {
+    // A jump needs to fit clearly better than the best nearby reading, and somewhere in particular.
+    if (far?.placement && this.confident(far, hint) && far.placement.matched >= (local?.placement?.matched ?? 0) + 2 && this.distinct(far, hint)) {
       return this.apply(far, heard, "jumped");
     }
     if (local?.placement && local.placement.matched > 0) return this.apply(local, heard, "follow");
@@ -339,8 +360,7 @@ export class Tracker {
       choice = this.choose(keys, (core) => this.globalPlacement(core, hint), hint);
       const p = choice?.placement;
       if (!choice || !p || !this.confident(choice, hint) || choice.ambiguous) return null;
-      const onPage = !!hint && p.start >= hint[0] && p.start < hint[1];
-      if (p.matched < 3 && !onPage) return null;
+      if (p.matched < 3 && !this.onPage(p, hint)) return null;
     } else {
       choice = this.choose(heard.keys, (core) => this.localPlacement(core), null);
       if (!choice?.placement || choice.placement.matched === 0) return null;

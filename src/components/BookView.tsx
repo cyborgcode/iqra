@@ -176,21 +176,24 @@ export function BookView({ page }: { page: number }) {
     [corpus, start],
   );
 
-  // Follow the reciter: turn to the page of the last word heard.
-  const position = rec.live?.heard.at(-1) ?? (rec.cursor !== null && rec.cursor > 0 ? rec.cursor - 1 : null);
+  // Follow the reciter: turn to the page of the word being said or, in a pause, of the word they read
+  // on from, so that the next page is there as they finish one.
+  const position = rec.at;
   useEffect(() => {
     if (!corpus || rec.phase === "idle" || position === null) return;
     const p = pageOfAyah(corpus.ayahOfWord[Math.min(position, corpus.size - 1)]!);
     const route = currentRoute();
     if (route.view !== "book") return;
     const s = latest.current.spread;
-    const open = s ? spreadOf(route.page) : [route.page];
+    // The page shown or, while one is turning, the page it turns to: it is not turned twice.
+    const shown = pager.destination ?? route.page;
+    const open = s ? spreadOf(shown) : [shown];
     if (open.includes(p)) return;
     // The next page slides in as when turned; a jump further goes straight there.
     const following = s ? spreadOf(open[0]! + 2) : [open[0]! + 1];
     if (following.includes(p)) turn(1, true);
     else goToPage(p, { replace: true });
-  }, [corpus, rec.phase, position, turn]);
+  }, [corpus, rec.phase, position, turn, pager]);
 
   // With large text the page scrolls: keep the word being recited in view.
   useEffect(() => {

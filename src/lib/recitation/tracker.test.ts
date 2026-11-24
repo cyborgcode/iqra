@@ -140,6 +140,28 @@ describe("Tracker: following a recitation through the book", () => {
     expect(statuses(t, 112, 2)).toEqual(["correct", "correct"]);
   });
 
+  it("stays with the reciter when two words of a misheard fragment fit in many places elsewhere", () => {
+    const t = tracker();
+    for (const a of [1, 2, 3]) t.commit(say(78, a), page(582));
+    const cursor = t.cursor;
+    // The end of an ayah cut off and misheard («كِذَّابًا» as «وَإِذَّا مَا»), and the start of 78:29 far
+    // ahead of where the reciter is: neither moves the book to one of the places they fit.
+    for (const fragment of ["وَإِذَّا مَا", "وَكُلَّ شَيْءٍ"]) {
+      expect(t.commit(fragment, page(582)).kind).toBe("unrecognized");
+      expect(t.cursor).toBe(cursor);
+    }
+    expect(t.commit(say(78, 4), page(582))).toMatchObject({ kind: "followed", start: firstWord(78, 4) });
+    // Three words that fit in one place only are a jump.
+    expect(t.commit(say(112, 1), page(582))).toMatchObject({ kind: "jumped", start: firstWord(112, 1) });
+  });
+
+  it("follows the reader to a page they turned to, from two words that fit there", () => {
+    const t = tracker();
+    for (const a of [1, 2, 3]) t.commit(say(78, a), page(582));
+    // اللَّهُ الصَّمَدُ (112:2), with page 604 open.
+    expect(t.commit("اللَّهُ الصَّمَدُ", page(604))).toMatchObject({ kind: "jumped", start: firstWord(112, 2) });
+  });
+
   it("goes on into the next surah, with or without the basmala between them", () => {
     const t = tracker();
     for (const a of [1, 2, 3, 4, 5]) t.commit(say(111, a), page(603));

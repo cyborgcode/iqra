@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildCorpus, type Corpus } from "../quran/corpus";
-import { DEFAULT_SECONDS_PER_UNIT, MAX_AHEAD, Pace, ayahEnd, checkedMarks, units, wordUnits, wordsAhead } from "./optimistic";
+import { DEFAULT_SECONDS_PER_UNIT, MAX_AHEAD, Pace, ayahEnd, checkedMarks, followedWord, units, wordUnits, wordsAhead } from "./optimistic";
+import { ayahIndex, pageOf, pageOfAyah } from "../quran/book";
 import type { WordMark } from "./tracker";
 import { surah } from "../../test/quran";
 import { SURAHS } from "../../data/surahs";
@@ -111,5 +112,31 @@ describe("words checked as the phrase goes", () => {
     expect(checkedMarks(new Map(), shown, shown).get(1)?.status).toBe("correct");
     // Two in a row that hear it wrong change it.
     expect(checkedMarks(misheard, misheard, shown).get(1)?.status).toBe("wrong");
+  });
+});
+
+describe("the word the book follows", () => {
+  const pageOfWord = (w: number) => pageOfAyah(corpus.ayahOfWord[w]!);
+  // Page 582 ends with 78:30; page 583 begins with 78:31.
+  const lastOf582 = corpus.ayahStart[ayahIndex(78, 31)]! - 1;
+
+  it("is the word being said while the reciter speaks, heard or lit", () => {
+    expect(followedWord(lastOf582 - 2, lastOf582 - 5, [])).toBe(lastOf582 - 2);
+    expect(followedWord(lastOf582 - 2, lastOf582 - 5, [lastOf582 - 1, lastOf582])).toBe(lastOf582);
+    // A word still lit that the phrase skipped is behind it.
+    expect(followedWord(lastOf582, lastOf582 - 5, [lastOf582 - 3])).toBe(lastOf582);
+  });
+
+  it("turns to the next page once the reciter pauses after the last word of a page", () => {
+    // Said up to the last word of 582, nothing heard of the next phrase yet: the reciter reads on at 78:31.
+    const w = followedWord(null, lastOf582, []);
+    expect(pageOfWord(lastOf582)).toBe(pageOf(78, 30));
+    expect(pageOfWord(w)).toBe(583);
+    // A pause in the middle of a page stays on it.
+    expect(pageOfWord(followedWord(null, lastOf582 - 4, []))).toBe(582);
+  });
+
+  it("follows the voice on when it has gone further than the last word said", () => {
+    expect(followedWord(null, lastOf582, [lastOf582 + 1, lastOf582 + 2])).toBe(lastOf582 + 2);
   });
 });

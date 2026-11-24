@@ -12,6 +12,9 @@
  *   transcript never shows a mistake that is not there.
  * - **Confirmed at the pause.** When the phrase is finished, the model's transcription of the whole of
  *   it marks every word, which may correct what was shown: a mistake can come late.
+ * - **Turned at the end of the page.** The book shows the page of the word being said and, in a pause,
+ *   of the word the reciter reads on from: it turns as they finish a page, without waiting for the
+ *   model to hear them on the next.
  */
 import type { Corpus } from "../quran/corpus";
 import type { WordMark } from "./tracker";
@@ -68,6 +71,16 @@ export function wordsAhead(corpus: Corpus, last: number, speech: number, seconds
     spoken += takes;
   }
   return out;
+}
+
+/**
+ * The word the book follows: in the phrase being recited, the furthest word heard (`heard`) or lit
+ * ahead of it; before its first words are heard (in a pause, or as it begins), the word after the last
+ * one said (`before`), which the reciter reads on from, or the furthest lit, if further on.
+ */
+export function followedWord(heard: number | null, before: number, ahead: readonly number[]): number {
+  const lit = ahead.at(-1) ?? -1;
+  return heard === null ? Math.max(before + 1, lit) : Math.max(heard, lit);
 }
 
 /** One past the last word of the ayah of corpus word `w`. */

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { asr } from "../lib/asr/client";
 import { RecorderError, startRecording, type RecorderHandle, type RecorderProblem } from "../lib/audio/recorder";
 import { LiveTranscriber } from "../lib/recitation/live";
-import { MAX_AHEAD, Pace, ayahEnd, checkedMarks, wordsAhead } from "../lib/recitation/optimistic";
+import { MAX_AHEAD, Pace, ayahEnd, checkedMarks, followedWord, wordsAhead } from "../lib/recitation/optimistic";
 import { collapseLoops } from "../lib/recitation/transcript";
 import type { OptionalPhrase } from "../lib/recitation/phrases";
 import { Tracker, type BookMarks, type LiveView, type TrackEvent, type WordMark } from "../lib/recitation/tracker";
@@ -53,6 +53,11 @@ export interface RecitationState {
   ahead: readonly number[];
   /** Words of the phrase being recited already checked, provisionally (see optimistic.ts). */
   checked: ReadonlyMap<number, WordMark>;
+  /**
+   * The word the book follows (its page is shown): the one being said or, in a pause, the one the
+   * reciter reads on from, which at the end of a page is on the next. Null until the reciter is found.
+   */
+  at: number | null;
   /** An ayah chosen with "recite from this ayah" (ayah index), used by the next recitation. */
   startAyah: number | null;
   /** The summary sheet being shown, if any. */
@@ -86,6 +91,7 @@ let state: RecitationState = {
   live: null,
   ahead: [],
   checked: new Map(),
+  at: null,
   startAyah: null,
   summary: null,
   lastSummary: null,
@@ -120,7 +126,7 @@ export function onLevel(listener: (rms: number) => void): () => void {
 }
 
 /** Nothing provisional: the phrase being recited is finished, or none has been heard. */
-const NO_LIVE = { live: null, ahead: [], checked: new Map() } satisfies Partial<RecitationState>;
+const NO_LIVE = { live: null, ahead: [], checked: new Map(), at: null } satisfies Partial<RecitationState>;
 
 interface Session {
   tracker: Tracker;
@@ -149,9 +155,16 @@ function afterEvent(s: Session, event: TrackEvent) {
   }
   s.firstAyah ??= s.tracker.span ? s.tracker.corpus.ayahOfWord[s.tracker.span[0]]! : null;
   const cursor = s.tracker.cursor;
-  // The words the voice has gone on to past the finished phrase stay lit: the reciter is saying them.
-  const ahead = cursor === null ? [] : state.ahead.filter((w) => w >= cursor);
-  set({ cursor, ...NO_LIVE, ahead, revealed: new Set([...s.tracker.sessionWords, ...state.hinted]), version: state.version + 1 });
+  let ahead: readonly number[] = [];
+  if (event.kind !== "jumped") {
+    // The words the voice has gone on to past the finished phrase stay lit: the reciter is saying them.
+    ahead = state.ahead.filter((w) => w >= cursor!);
+  } else {
+    // Gone elsewhere: what was lit and how far the last phrase had got were about the place the
+    // reciter left. Follow on from where they are now.
+    s.handover = { index: s.live.openIndex, word: -1 };
+  }
+  set({ cursor, ...NO_LIVE, ahead, at: readingAt(s, ahead), revealed: new Set([...s.tracker.sessionWords, ...state.hinted]), version: state.version + 1 });
 }
 
 /**
@@ -186,6 +199,27 @@ function wordsAheadOf(s: Session): readonly number[] {
   const added = fresh.filter((w) => !kept.includes(w)).slice(0, 1);
   const words = [...kept, ...added].sort((a, b) => a - b);
   return words.length === state.ahead.length && words.every((w, i) => w === state.ahead[i]) ? state.ahead : words;
+}
+
+/**
+ * The word the book follows (see RecitationState.at), with `ahead` the words lit ahead of the model.
+ * Once the reciter has stopped, the last word said: they read on nowhere, and the book shows what they
+ * recited.
+ */
+function readingAt(s: Session, ahead: readonly number[], stopped = state.phase !== "listening"): number | null {
+  const cursor = s.tracker.cursor;
+  const index = s.live.openIndex;
+  const current = s.preview?.index === index ? s.preview : null;
+  const before = Math.max(cursor === null ? -1 : cursor - 1, s.handover?.index === index ? s.handover.word : -1);
+  if (!current && cursor === null && before < 0) return null;
+  if (stopped && !current) return before >= 0 ? before : null;
+  return followedWord(current ? current.view.heard.at(-1)! : null, before, ahead);
+}
+
+/** What the voice has gone on to and where the book follows, as of now. */
+function progress(s: Session): Pick<RecitationState, "ahead" | "at"> {
+  const ahead = wordsAheadOf(s);
+  return { ahead, at: readingAt(s, ahead) };
 }
 
 export interface StartOptions {
@@ -253,7 +287,7 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
         s.preview = { index, view, end };
         // The reciter's pace, from the first words: the speech from the start of the phrase to here.
         if (view.heard.length) s.pace.observe(s.live.speechBetween(s.live.phraseStart, end), view.heard[0]!, view.heard.at(-1)!);
-        set({ live: view, checked, ahead: wordsAheadOf(s) });
+        set({ live: view, checked, ...progress(s) });
       },
       onIdle: () => {
         if (session === s && s.handle) s.live.update(s.handle.samples());
@@ -275,10 +309,10 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
     s.timer = setInterval(() => {
       if (!s.handle) return;
       s.live.update(s.handle.samples());
-      const ahead = wordsAheadOf(s);
-      if (ahead !== state.ahead) set({ ahead });
+      const next = progress(s);
+      if (next.ahead !== state.ahead || next.at !== state.at) set(next);
     }, UPDATE_MS);
-    set({ phase: "listening", startedAt: performance.now(), cursor: tracker.cursor });
+    set({ phase: "listening", startedAt: performance.now(), cursor: tracker.cursor, at: tracker.cursor });
   } catch (error) {
     session = null;
     const problem = error instanceof RecorderError ? error.problem : "failed";
@@ -292,7 +326,7 @@ export async function stopRecitation(): Promise<void> {
   if (s.timer) clearInterval(s.timer);
   const handle = s.handle;
   s.handle = null;
-  set({ phase: "finishing" });
+  set({ phase: "finishing", at: readingAt(s, state.ahead, true) });
   try {
     const recording = await handle.stop();
     await s.live.finish(recording.samples);

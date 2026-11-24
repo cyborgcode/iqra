@@ -267,6 +267,10 @@ and the model checks it in parallel; a mistake may show a moment late
   places nothing (often one cut off mid-word), changes nothing.
 - **Confirmed at the pause.** The finished phrase, transcribed afresh, marks every word, which may change what
   was shown.
+- **Turned at the end of the page.** The book shows the page of the word being said and, in a pause, of the word
+  you read on from. So when you pause after the last word of a page, the next page slides in at once, without
+  waiting for the model to hear you on it (and whether or not you can see its first words); when you stop, the book
+  goes back to the page you recited.
 
 A live preview that puts the reciter three words or more further on, or before where they are, needs as many
 words that fit ([`src/lib/recitation/tracker.ts`](src/lib/recitation/tracker.ts)). A transcript cut off mid-word is
@@ -282,7 +286,9 @@ long 1:7; a word skipped is marked missed 4 s sooner. With the text hidden, each
 to 0.7 s (normal speed) sooner on average than once the model has heard it, up to 2.2 s, and was then checked and
 marked correct. In these recitations of Al-Fatiha, hidden and shown, no word was shown wrong, hidden again or
 dark again once shown, and no two lit up together but the first two, which the first transcript to find the reciter
-hears together.
+hears together. Reciting An-Naba 27–33, which runs from page 582 onto 583, page 583 opens as soon as the pause after
+78:30, the last ayah of 582, is heard, before its transcription is back; it used to open 2 s after 78:31 began, once
+the model had heard its first word, and not at all while the reciter waited at the end of the page.
 
 ### Mistake detection
 
@@ -373,7 +379,9 @@ matched span cost nothing, and the span must start and end on a word close to th
 - words between where you were and where the segment starts were skipped, and are marked missed;
 - a segment that starts earlier is a repetition: its words take the latest attempt, nothing is marked missed;
 - a segment that fits nowhere nearby is looked up in the whole Quran again, which follows a jump to another page
-  or surah without marking anything in between;
+  or surah without marking anything in between. It takes three words that fit there and in one place only, or that
+  fit on a page you have turned to: two common words, often a misheard fragment (the end of 78:28, «كِذَّابًا», heard
+  as «وَإِذَّا مَا»), fit in many places and would send the book away from you;
 - the isti'ādha, the basmala (between surahs, or before starting mid-surah), *ṣadaqa-llāh* and *āmīn* are
   recognized and never reported as added words, unless they are the text itself (Al-Fatiha 1:1, 27:30, 16:98);
 - when you stop one or two words before the end of an ayah, those words are marked missed.
@@ -505,7 +513,9 @@ about 0.05 s and a change of view within 0.25 s.
   word.
 - Pages follow the Madani page boundaries but not its exact lines, which Tanzil does not publish: a line here
   holds a few more or fewer words than in print, and justification widens spaces rather than stretching letters.
-- Following updates about every second or two, not with every syllable: the model needs that long to transcribe.
+- The model checks a word about a second after it is said (median 1.1–1.5 s on a laptop, longer on a slower
+  device), and the last word of a phrase once the phrase is transcribed: until then the book shows it as you say
+  it, and a mistake can show late.
 - An ayah whose words also occur elsewhere (refrains such as 55:13) is placed on the open page, or near where you
   were reciting; recited on its own from another page, it is placed at the first ayah with those words.
 - Marks are kept in memory until the page is reloaded, and only the page you last opened is remembered (in
