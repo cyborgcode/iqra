@@ -248,11 +248,16 @@ and the model checks it in parallel; a mistake may show a moment late
 ([`src/lib/recitation/optimistic.ts`](src/lib/recitation/optimistic.ts)).
 
 - **Ahead of the model.** While you speak, the words your voice has gone on to since the last word the model
-  heard light up at once, from how long each takes to say: a word $w$ of $\ell_w$ letters lights up once the speech
-  since then reaches $\sum_{v < w} r\,\ell_v + 0.4\, r\,\ell_w$, with $r$ your pace in seconds per letter,
-  measured on your finished phrases (0.15 s until then). At most two words ahead, never across the end of an ayah
-  (reciters pause there, or hold its last word), never in a pause (silence is not counted), and never in "Recite
-  from memory", where a word shows only once it is heard.
+  heard light up at once, from how long each takes to say. A word $w$ is $u_w$ units long: its letters, plus
+  three for a long madd (maddah), one for a long ā written small, half for a doubled letter, none for a letter
+  marked silent. It lights up once the speech since the last word heard reaches
+  $\sum_{v < w} r\,u_v + 0.3\, r\,u_w$, with $r$ your pace in seconds per unit, measured on your finished
+  phrases and, from its first words, on the one you are reciting (0.12 s until then). Up to three words ahead,
+  one more at a time (ten looks a second), so that catching up runs along the words rather than jumping; never
+  in a pause (silence is not counted). Within a phrase, not past the end of its ayah (a reciter may hold its
+  last word); a new phrase, after a pause, goes on into the next ayah at once, without waiting for the last
+  phrase's transcription. In "Recite from memory" a hidden word's band lights up while you say it, without
+  showing it; the word shows once the model has heard it.
 - **Checked as you go.** The words a provisional transcript has gone past (all but the last, which may be cut
   off mid-word) turn green at once; a word read wrong, left out, or skipped before the phrase (once two words after
   it are heard) shows once two transcripts in a row agree on it, so that one misheard transcript never shows a
@@ -265,10 +270,15 @@ A live preview that puts the reciter three words or more further on, or before w
 words that fit ([`src/lib/recitation/tracker.ts`](src/lib/recitation/tracker.ts)). A transcript cut off mid-word is
 often misheard: as 1:7 began, «صِرَاطًا لَا» put «لَا» on 2:2, the next page, which turned there and back.
 
-Measured the same way, against the version before: each word lights up 0.3 s sooner on average and is marked
-2.4 s (at 1.6×) to 3.8 s (at normal speed) sooner, up to 13 s in the long 1:7, which was marked only once
-finished; a word skipped is marked missed 4 s sooner. In 7 recitations of Al-Fatiha every word ended correct, none
-was shown wrong, and none went dark again once lit.
+On the page a word being said lights up with a band that sweeps in from the right, in reading direction, and
+fades once it is passed; marks fade in (none of it moves when the system asks for reduced motion).
+
+Measured the same way: words light up 0.3 s sooner on average than with lighting on the model's word alone, and
+are marked 2.4 s (at 1.6×) to 3.8 s (at normal speed) sooner than once their phrase is finished, up to 13 s in the
+long 1:7; a word skipped is marked missed 4 s sooner. With the text hidden, the band of the word being said
+reaches each word 0.6 s (normal speed) to 0.9 s (1.6×) sooner on average than the model's hearing it, up to
+2.5 s. In 9 recitations of Al-Fatiha (5 with the text hidden, 4 shown) every word ended correct, none was shown
+wrong, none went dark again once lit, and no two lit up together.
 
 ### Mistake detection
 

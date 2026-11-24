@@ -140,7 +140,7 @@ export class LiveTranscriber {
   }
 
   /** Seconds of speech (by the level that counts as speech now) between two samples of the recording. */
-  private speechBetween(from: number, to: number): number {
+  speechBetween(from: number, to: number): number {
     const level = this.speechLevel;
     if (level === null) return 0;
     let frames = 0;
@@ -158,6 +158,11 @@ export class LiveTranscriber {
   /** Where the phrase now being recited begins: the end of the last finished one. */
   get phraseStart(): number {
     return this.committed;
+  }
+
+  /** The index the phrase now being recited will get (that of its provisional transcripts). */
+  get openIndex(): number {
+    return this.parts.length;
   }
 
   /** Call periodically during recording with all samples so far (a view is fine; it is not kept). */

@@ -146,25 +146,35 @@ function afterEvent(s: Session, event: TrackEvent) {
     return;
   }
   s.firstAyah ??= s.tracker.span ? s.tracker.corpus.ayahOfWord[s.tracker.span[0]]! : null;
-  set({ cursor: s.tracker.cursor, ...NO_LIVE, revealed: new Set([...s.tracker.sessionWords, ...state.hinted]), version: state.version + 1 });
+  const cursor = s.tracker.cursor;
+  // The words the voice has gone on to past the finished phrase stay lit: the reciter is saying them.
+  const ahead = cursor === null ? [] : state.ahead.filter((w) => w >= cursor);
+  set({ cursor, ...NO_LIVE, ahead, revealed: new Set([...s.tracker.sessionWords, ...state.hinted]), version: state.version + 1 });
 }
 
 /**
- * The words the reciter's voice has gone on to since the last word the model heard (or since the last
- * finished phrase, before any is heard in this one). They stay lit until the model has heard the
- * phrase further, or it is finished. Within the ayah: reciters pause between ayahs, and may hold the
- * end of one (a long madd), which must not light the next.
+ * The words the reciter's voice has gone on to since the last word the model heard. They stay lit
+ * until the model has heard the phrase further, or it is finished.
+ *
+ * Within a phrase, not past the end of its ayah: a reciter holds the end of one (a long madd), which
+ * must not light the next. A new phrase, after a pause, goes on from where the last one ended, into
+ * the next ayah: from where the model placed it, or, while its transcription is still on its way,
+ * from what its provisional transcripts heard, so that the book does not wait for it.
  */
 function wordsAheadOf(s: Session): readonly number[] {
   const cursor = s.tracker.cursor;
   if (cursor === null) return [];
   const corpus = s.tracker.corpus;
-  const heard = s.preview?.view.heard ?? [];
-  const last = heard.length ? heard.at(-1)! : cursor - 1;
-  const since = heard.length ? s.preview!.end : s.live.phraseStart;
-  const until = ayahEnd(corpus, heard.length ? last : cursor);
-  const fresh = wordsAhead(corpus, last, s.live.speechSince(since), s.pace.secondsPerLetter, until);
-  const words = [...new Set([...state.ahead.filter((w) => w > last && w <= last + MAX_AHEAD && w < until), ...fresh])].sort((a, b) => a - b);
+  const current = s.preview?.index === s.live.openIndex ? s.preview : null;
+  const last = current ? current.view.heard.at(-1)! : Math.max(cursor - 1, s.preview?.view.heard.at(-1) ?? -1);
+  const since = current ? current.end : s.live.phraseStart;
+  const until = ayahEnd(corpus, current ? last : last + 1);
+  const fresh = wordsAhead(corpus, last, s.live.speechSince(since), s.pace.secondsPerUnit, until);
+  const kept = state.ahead.filter((w) => w > last && w <= last + MAX_AHEAD && w < until);
+  // One more word at a time (each look, ten times a second): catching up, as when the reciter has just
+  // been found, runs along the words rather than jumping.
+  const added = fresh.filter((w) => !kept.includes(w)).slice(0, 1);
+  const words = [...kept, ...added].sort((a, b) => a - b);
   return words.length === state.ahead.length && words.every((w, i) => w === state.ahead[i]) ? state.ahead : words;
 }
 
@@ -230,6 +240,8 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
           : placed;
         const checked = checkedMarks(placed.settled, before?.settled ?? new Map(), before ? state.checked : new Map());
         s.preview = { index, view, end };
+        // The reciter's pace, from the first words: the speech from the start of the phrase to here.
+        if (view.heard.length) s.pace.observe(s.live.speechBetween(s.live.phraseStart, end), view.heard[0]!, view.heard.at(-1)!);
         set({ live: view, checked, ahead: wordsAheadOf(s) });
       },
       onIdle: () => {

@@ -51,6 +51,8 @@
   --spine: oklch(0.3 calc(0.08 * var(--c)) var(--h) / 0.28);
   --mask: oklch(0.3 calc(0.06 * var(--c)) var(--h) / 0.1);
   --live: oklch(0.68 calc(0.15 * var(--c)) var(--h) / 0.16);
+  /* A hidden word being said ("recite from memory"): its band, in the accent. */
+  --at: oklch(0.68 calc(0.15 * var(--c)) var(--h) / 0.45);
 
   /* The microphone, the logo tile and filled buttons: bleu ciel, with black on them. */
   --mic-a: oklch(0.85 calc(0.09 * var(--c)) var(--h));
@@ -119,6 +121,7 @@
   --spine: rgb(255 255 255 / 0.1);
   --mask: rgb(255 255 255 / 0.14);
   --live: oklch(0.8 calc(0.11 * var(--c)) var(--h) / 0.22);
+  --at: oklch(0.8 calc(0.11 * var(--c)) var(--h) / 0.45);
 
   --mic-a: oklch(0.85 calc(0.09 * var(--c)) var(--h));
   --mic-b: oklch(0.76 calc(0.12 * var(--c)) var(--h));
@@ -1188,6 +1191,51 @@ a {
   }
 }
 
+/*
+ * On the page, the reading moves smoothly: a word being said lights up with a band that sweeps in, in
+ * reading direction (from the right), and fades out once it is passed; marks fade in. A hidden word
+ * ("recite from memory") keeps its band, which lights up while it is being said, without showing it.
+ */
+@property --band {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: transparent;
+}
+.page-text .w {
+  --band: transparent;
+  background-image: linear-gradient(var(--band), var(--band));
+  background-repeat: no-repeat;
+  background-size: 0% 0.5em;
+  background-position: 100% 88%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition:
+    --band 0.3s ease,
+    color 0.3s ease,
+    background-size 0s linear 0.3s;
+}
+.page-text .w-live {
+  --band: var(--live);
+  color: var(--accent);
+  background-size: 100% 0.5em;
+  transition:
+    background-size 0.28s cubic-bezier(0.3, 0.7, 0.4, 1),
+    --band 0.12s ease,
+    color 0.2s ease;
+}
+.page-text .w-masked {
+  --band: var(--mask);
+  color: transparent;
+  background-size: calc(100% - 0.12em) 0.62em;
+  background-position: center 62%;
+  transition:
+    --band 0.25s ease,
+    color 0.35s ease;
+}
+.page-text .w-masked.w-live {
+  --band: var(--at);
+}
+
 /* "Recite from memory": a hidden word keeps its place as a soft band. */
 .w-masked {
   color: transparent;
@@ -1783,6 +1831,11 @@ a {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .page-text .w,
+  .page-text .w-live,
+  .page-text .w-masked {
+    transition: none;
+  }
   .spinner {
     animation-duration: 2.4s;
   }

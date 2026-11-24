@@ -241,14 +241,13 @@ export function BookView({ page }: { page: number }) {
   }, [rec.phase]);
 
   const view: PageView = useMemo(() => {
-    // Lit: the word the model heard last (still being said) and the ones the voice has gone on to, but
-    // not in "recite from memory", where a word shows only once the model has heard it.
-    const ahead = settings.memorize ? [] : rec.ahead;
+    // Lit: the word the model heard last (still being said), and the ones the voice has gone on to.
     const heard = (rec.live?.heard ?? []).filter((w) => !rec.checked.has(w));
     return {
-      live: new Set([...heard, ...ahead]),
+      live: new Set(heard),
+      ahead: new Set(rec.ahead.filter((w) => !rec.checked.has(w))),
       checked: rec.checked,
-      next: rec.phase === "idle" ? null : ahead.length ? ahead.at(-1)! + 1 : (rec.live?.end ?? rec.cursor),
+      next: rec.phase === "idle" ? null : rec.ahead.length ? rec.ahead.at(-1)! + 1 : (rec.live?.end ?? rec.cursor),
       memorize: settings.memorize,
       revealed: rec.revealed,
       hinted: rec.hinted,
