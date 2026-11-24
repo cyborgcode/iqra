@@ -8,12 +8,20 @@ export interface LiveOptions extends SegmentOptions {
    * transcriptions are only requested while no finished segment is waiting, so they never delay one.
    */
   onPartial?: (index: number, text: string) => void;
+  /**
+   * The model has nothing left to do: call `update` again now (rather than at the next tick), so the
+   * phrase being recited is transcribed again as soon as it can be.
+   */
+  onIdle?: () => void;
 }
 
-/** New audio needed in the open segment before it is transcribed again. */
-const PARTIAL_GROWTH_SECONDS = 0.6;
-/** The open segment must be at least this long to be worth a partial transcription. */
-const PARTIAL_MIN_SECONDS = 0.8;
+/**
+ * New audio needed in the open segment before it is transcribed again: a fraction of a word, so the
+ * words being recited light up one by one, as fast as the model goes.
+ */
+const PARTIAL_GROWTH_SECONDS = 0.2;
+/** The open segment must be at least this long to be worth a partial transcription (a short word). */
+const PARTIAL_MIN_SECONDS = 0.5;
 /** The reciter counts as speaking (worth a partial transcription) until this much silence. */
 const SPEAKING_GAP_SECONDS = 0.2;
 /** After this long a pause ends even a short phrase, which a shorter pause would join to the next. */
@@ -37,6 +45,8 @@ export class LiveTranscriber {
   private inFlight = 0;
   private partialIndex = -1;
   private partialLength = 0;
+  /** Where (in the whole recording) the phrase transcribed provisionally starts. */
+  private partialStart = 0;
   private delivered = Promise.resolve();
   private finalsDelivered = 0;
   private finished = false;
@@ -47,13 +57,19 @@ export class LiveTranscriber {
     private readonly options: LiveOptions = {},
   ) {}
 
+  /** A request answered: when none is left, the model can take the next. */
+  private answered() {
+    this.inFlight--;
+    if (this.inFlight === 0 && !this.finished) this.options.onIdle?.();
+  }
+
   private send(segment: Float32Array) {
     const index = this.parts.length;
     this.inFlight++;
     const part = this.transcribe(segment, false);
     const done = () => {
       this.settled++;
-      this.inFlight--;
+      this.answered();
     };
     void part.then(done, done);
     this.parts.push(part);
@@ -65,18 +81,31 @@ export class LiveTranscriber {
     });
   }
 
-  private sendPartial(segment: Float32Array, index: number) {
+  private sendPartial(segment: Float32Array, index: number, start: number) {
     this.inFlight++;
     this.partialIndex = index;
     this.partialLength = segment.length;
+    this.partialStart = start;
     this.transcribe(segment, true).then(
       (text) => {
-        this.inFlight--;
         // Stale once that segment (or a later one) is final.
         if (!this.finished && this.finalsDelivered <= index && this.parts.length <= index) this.options.onPartial?.(index, text);
+        this.answered();
       },
-      () => this.inFlight--,
+      () => this.answered(),
     );
+  }
+
+  /**
+   * Sends the finished segments of `tail` (the recording from `base` on). The first starts no later than
+   * its provisional transcripts did: the level that counts as speech rises as a recording begins and the
+   * reciter's voice is heard, and would otherwise cut off a soft start the model has already heard.
+   */
+  private sendFinished(tail: Float32Array, base: number, segments: readonly { start: number; end: number }[]) {
+    segments.forEach((s, i) => {
+      const start = i === 0 && this.parts.length === this.partialIndex ? Math.max(0, Math.min(s.start, this.partialStart - base)) : s.start;
+      this.send(tail.slice(start, s.end));
+    });
   }
 
   private threshold(samples: Float32Array): number | null {
@@ -106,28 +135,27 @@ export class LiveTranscriber {
       if (trailingSilence >= (short ? LONG_PAUSE_SECONDS : pause)) finished = segments.length;
     }
     if (finished > 0) {
-      for (const s of segments.slice(0, finished)) this.send(tail.slice(s.start, s.end));
+      this.sendFinished(tail, base, segments.slice(0, finished));
       this.committed += segments[finished - 1]!.end;
     }
     // While the reciter speaks, the phrase so far, provisionally; never while a finished one waits, and
     // not in a pause, where the phrase is about to be finished.
     const open = finished < segments.length ? segments.at(-1) : undefined;
     if (!this.options.onPartial || !open || this.inFlight > 0 || trailingSilence >= SPEAKING_GAP_SECONDS) return;
-    const start = base + open.start;
-    const length = samples.length - start;
     const index = this.parts.length;
+    // A phrase keeps the earliest start it was heard from (see sendFinished).
+    const start = index === this.partialIndex ? Math.max(base, Math.min(base + open.start, this.partialStart)) : base + open.start;
+    const length = samples.length - start;
     if (length < PARTIAL_MIN_SECONDS * rate) return;
     if (index === this.partialIndex && length - this.partialLength < PARTIAL_GROWTH_SECONDS * rate) return;
-    this.sendPartial(samples.slice(start), index);
+    this.sendPartial(samples.slice(start), index, start);
   }
 
   /** Call once after recording. Resolves with one text per segment, in order. */
   async finish(samples: Float32Array, onProgress?: (done: number, total: number) => void): Promise<string[]> {
     this.finished = true;
     const tail = samples.subarray(this.committed);
-    for (const s of segmentByPauses(tail, { ...this.options, threshold: this.threshold(samples) }).segments) {
-      this.send(tail.slice(s.start, s.end));
-    }
+    this.sendFinished(tail, this.committed, segmentByPauses(tail, { ...this.options, threshold: this.threshold(samples) }).segments);
     this.committed = samples.length;
     const total = this.parts.length;
     onProgress?.(this.settled, total);

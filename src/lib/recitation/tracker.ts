@@ -81,6 +81,12 @@ const MAX_WAITING = 3;
 const MAX_BACK = 80;
 /** Words left at the end of an ayah when the reciter stops that count as missed. */
 const MAX_UNFINISHED = 2;
+/**
+ * A preview this many words past where the reciter is expected, or further, needs as many words that
+ * fit: a provisional transcript is often cut off mid-word and misheard, and a word or two fitting
+ * further on (a common one, like «لَا») is more often that than a skipped ayah.
+ */
+const PREVIEW_LEAP = 3;
 
 export function heardWords(text: string): Heard {
   const raw = collapseLoops(text)
@@ -331,6 +337,9 @@ export class Tracker {
     } else {
       choice = this.choose(heard.keys, (core) => this.localPlacement(core), null);
       if (!choice?.placement || choice.placement.matched === 0) return null;
+      // A leap ahead waits for more of the phrase, rather than turn the page on a guess and back.
+      const { start, matched } = choice.placement;
+      if (start - this.cursor >= PREVIEW_LEAP && matched < PREVIEW_LEAP) return null;
     }
     const p = choice.placement!;
     const words = p.ops.flatMap((op) => (op.type === "match" && op.similarity >= this.threshold ? op.words : []));

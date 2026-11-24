@@ -87,6 +87,36 @@ class LoopGuard extends LogitsProcessor {
   }
 }
 
+/** Whisper's audio features: an 80-band log-mel spectrogram, a frame every 160 samples (10 ms). */
+const HOP = 160;
+/** Silence after the audio in the part of the window computed: the last frames there see only silence. */
+const SILENT_TAIL = 3 * HOP;
+
+type FeatureExtractor = (audio: Float32Array, options: { max_length: number }) => Promise<{ input_features: Tensor }>;
+
+/**
+ * Whisper's features for `audio` padded with silence to `window` samples, computed only where there is
+ * audio. A frame of silence always gets the same value (the spectrogram's floor, set relative to its
+ * loudest point, which silence cannot be), so the spectrogram is computed for the audio and a little
+ * silence, and its last frame, silent, fills the rest. The same as computing the whole window (to the
+ * last bit), at a fraction of the cost for a short phrase.
+ */
+export async function windowFeatures(extract: FeatureExtractor, audio: Float32Array, window: number): Promise<Tensor> {
+  const frames = Math.floor(window / HOP);
+  const computed = Math.ceil((audio.length + SILENT_TAIL) / HOP) * HOP;
+  if (computed >= window) return (await extract(audio, { max_length: window })).input_features;
+  const { input_features } = await extract(audio, { max_length: computed });
+  const [, bands = 0, have = 0] = input_features.dims;
+  const data = input_features.data as Float32Array;
+  const out = new Float32Array(bands * frames);
+  for (let b = 0; b < bands; b++) {
+    const row = data.subarray(b * have, (b + 1) * have);
+    out.set(row, b * frames);
+    out.fill(row[have - 1]!, b * frames + have, (b + 1) * frames);
+  }
+  return new Tensor("float32", out, [1, bands, frames]);
+}
+
 /** The encoder's output for the audio features (the encoder alone, as generation runs it). */
 async function encode(whisper: WhisperForConditionalGeneration, features: Tensor): Promise<Tensor> {
   const session = (whisper as unknown as { sessions: Record<string, { run(feeds: Record<string, unknown>): Promise<Record<string, unknown>> }> }).sessions.model;
@@ -154,7 +184,7 @@ export async function transcribePhrase({ whisper, tokenizer, processor }: Whispe
   const s = settingsOf(whisper);
   const end = endToken(s);
   const prompt = promptOf(s);
-  const { input_features } = (await processor.feature_extractor!(audio, { max_length: options.window })) as { input_features: Tensor };
+  const input_features = await windowFeatures(processor.feature_extractor! as unknown as FeatureExtractor, audio, options.window);
   const loops = new LoopDetector();
   const logits_processor = new LogitsProcessorList();
   if (options.guard) logits_processor.push(new LoopGuard(loops, end));

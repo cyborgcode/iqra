@@ -5,7 +5,7 @@
 import { AutoConfig, AutoProcessor, AutoTokenizer, WhisperForConditionalGeneration, env } from "@huggingface/transformers";
 import { MODELS, RUNTIME, fileUrl, type ModelConfig, type ModelId } from "../config/models";
 import { transcribePhrase, type Transcription, type Whisper } from "../lib/asr/decode";
-import { FULL_WINDOW_SECONDS, SAMPLE_RATE, openEncoderWindow, windowSeconds } from "../lib/asr/encoder-window";
+import { FULL_WINDOW_SECONDS, PARTIAL_PAD_SECONDS, PAD_SECONDS, SAMPLE_RATE, openEncoderWindow, windowSeconds } from "../lib/asr/encoder-window";
 import { hasWebGPU } from "../lib/asr/gpu";
 import { leveled } from "../lib/audio/level";
 import type { Backend, EnginePreference, WorkerRequest, WorkerResponse } from "../lib/asr/protocol";
@@ -217,8 +217,8 @@ async function recognize(segment: Float32Array, partial: boolean): Promise<strin
   const audio = leveled(segment);
   const maxTokens = tokenBudget(audio.length);
   const inFull = () => transcribePhrase(loaded, audio, { window: FULL_WINDOW_SECONDS * SAMPLE_RATE, maxTokens, guard: false });
-  const inShort = (withDraft: boolean) =>
-    transcribePhrase(loaded, audio, { window: windowSeconds(audio.length) * SAMPLE_RATE, maxTokens, guard: true, draft: withDraft ? draft : null });
+  const window = windowSeconds(audio.length, partial ? PARTIAL_PAD_SECONDS : PAD_SECONDS) * SAMPLE_RATE;
+  const inShort = (withDraft: boolean) => transcribePhrase(loaded, audio, { window, maxTokens, guard: true, draft: withDraft ? draft : null });
 
   let result: Transcription | null = null;
   if (loaded.shortWindows) {

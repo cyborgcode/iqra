@@ -1,6 +1,6 @@
 import { InferenceSession, Tensor } from "onnxruntime-node";
 import { describe, expect, it } from "vitest";
-import { FULL_WINDOW_SECONDS, MAX_POSITIONS, PAD_SECONDS, SAMPLE_RATE, openEncoderWindow, windowSeconds } from "./encoder-window";
+import { FULL_WINDOW_SECONDS, MAX_POSITIONS, PARTIAL_PAD_SECONDS, PAD_SECONDS, SAMPLE_RATE, openEncoderWindow, windowSeconds } from "./encoder-window";
 
 // A model laid out as a Whisper encoder, but tiny: the input's 3000 frames are halved to 1500
 // positions (a strided slice here, a strided convolution in Whisper), to which a table of 1500
@@ -67,6 +67,7 @@ describe("window for a phrase", () => {
     expect(windowSeconds(4.2 * SAMPLE_RATE)).toBe(5 + PAD_SECONDS);
     expect(windowSeconds(0)).toBe(PAD_SECONDS);
     expect(windowSeconds(29 * SAMPLE_RATE)).toBe(FULL_WINDOW_SECONDS);
+    expect(windowSeconds(4.2 * SAMPLE_RATE, PARTIAL_PAD_SECONDS)).toBe(5 + PARTIAL_PAD_SECONDS);
   });
 });
 

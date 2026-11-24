@@ -62,8 +62,11 @@ export interface RecitationState {
 }
 
 const MAX_SECONDS = 15 * 60;
-/** How often the recording is looked at for pauses (a finished phrase is sent at the first look after it). */
-const UPDATE_MS = 250;
+/**
+ * How often the recording is looked at for pauses (a finished phrase is sent at the first look after it)
+ * and for new words to transcribe; also each time the model is done.
+ */
+const UPDATE_MS = 100;
 /**
  * The longest phrase sent to the model while following: where a reciter leaves no pause, the book is
  * never more than this behind, and the model is not handed several ayahs at once.
@@ -169,6 +172,9 @@ export async function startRecitation({ threshold, hint }: StartOptions): Promis
       },
       onPartial: (_, transcript) => {
         if (session === s && state.phase === "listening") set({ live: tracker.preview(transcript, s.hint()) });
+      },
+      onIdle: () => {
+        if (session === s && s.handle) s.live.update(s.handle.samples());
       },
     });
     session = s;

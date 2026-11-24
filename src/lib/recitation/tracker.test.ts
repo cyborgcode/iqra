@@ -197,6 +197,16 @@ describe("Tracker: following a recitation through the book", () => {
     expect(u.preview(say(112, 1), page(1))?.start).toBe(firstWord(112, 1));
   });
 
+  it("keeps a preview with the reciter when a word cut off mid-way fits only further on", () => {
+    const t = tracker();
+    for (const ayah of FATIHA.slice(0, 6)) t.commit(ayah, page(1));
+    // The first 0.9 s of 1:7, as the model heard it: «لَا» fits 2:2 alone, on the next page.
+    expect(t.preview("صِرَاطًا لَا", page(1))).toBeNull();
+    expect(t.preview("صِرَاطَ الَّذِينَ", page(1))?.heard).toEqual(words(1, 7).slice(0, 2));
+    // A reciter who skipped ahead shows there once three words fit.
+    expect(t.preview("ذَلِكَ الْكِتَابُ لَا رَيْبَ", page(1))?.heard).toEqual(words(2, 2).slice(0, 4));
+  });
+
   it("starts where asked ('recite from here')", () => {
     const t = tracker();
     t.startAt(firstWord(78, 5));

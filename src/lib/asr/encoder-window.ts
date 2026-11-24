@@ -20,19 +20,26 @@ export const SAMPLE_RATE = 16000;
 /** Whisper was trained on windows of 30 s: audio is padded with silence to fill one. */
 export const FULL_WINDOW_SECONDS = 30;
 /**
- * Silence after a phrase in a short window. With less, the model more often fails to see where the
- * phrase ends and repeats it; with this much, it transcribes recorded ayahs as it does in 30 s.
+ * Silence after a finished phrase in a short window. With less, the model more often fails to see where
+ * the phrase ends and repeats it; with this much, it transcribes recorded ayahs as it does in 30 s.
  */
 export const PAD_SECONDS = 6;
+/**
+ * Silence after a phrase still being recited, transcribed provisionally: less, for speed. Cut off
+ * mid-word, it differs from its transcription in 30 s mostly in that last word, about as often as with
+ * 6 s; the repeats it makes more often are cut off.
+ */
+export const PARTIAL_PAD_SECONDS = 3;
 
 /**
- * The window for a phrase of `samples` (16 kHz): the phrase and PAD_SECONDS of silence, in whole
+ * The window for a phrase of `samples` (16 kHz): the phrase and `pad` seconds of silence, in whole
  * seconds (so that few different lengths come up), at most 30 s. The encoder's work grows with the
  * window: a 4 s phrase costs a third of what it does padded to 30 s.
  */
-export function windowSeconds(samples: number): number {
-  return Math.min(FULL_WINDOW_SECONDS, Math.ceil(samples / SAMPLE_RATE + PAD_SECONDS));
+export function windowSeconds(samples: number, pad = PAD_SECONDS): number {
+  return Math.min(FULL_WINDOW_SECONDS, Math.ceil(samples / SAMPLE_RATE + pad));
 }
+
 /** The name of the sliced table in a rewritten graph (which also tells a graph already rewritten). */
 const SLICED = "iqra_positions";
 

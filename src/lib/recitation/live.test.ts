@@ -145,6 +145,66 @@ describe("LiveTranscriber: partial transcripts", () => {
     }
   });
 
+  it("transcribes the phrase again as soon as the model is free, word by word", async () => {
+    vi.useFakeTimers();
+    try {
+      const { audio, ayahs } = recitation();
+      const model = slowModel(150);
+      let recorded = 0;
+      const feed = () => live.update(audio.subarray(0, recorded));
+      const live = new LiveTranscriber(model.transcribe, { onPartial: () => {}, onIdle: feed });
+      // The app's clock: a look every 100 ms, the model answering in 150 ms.
+      const [start, end] = ayahs[4]!;
+      for (let t = 0; t < end; t += 0.05) {
+        recorded = Math.round(t * SR);
+        model.tick(t);
+        if (Math.round(t * 20) % 2 === 0) feed();
+        await vi.advanceTimersByTimeAsync(50);
+      }
+      // Within the 7.5 s ayah, a provisional transcript started every 0.2 to 0.3 s: as soon as the
+      // last was answered and a fifth of a second had been recited since.
+      const during = model.calls.filter((c) => c.at > start + 1 && c.at < end - 0.5).map((c) => c.at);
+      const gaps = during.slice(1).map((t, i) => t - during[i]!);
+      expect(during.length).toBeGreaterThan(20);
+      expect(Math.max(...gaps)).toBeLessThanOrEqual(0.3 + 1e-9);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not cut off the start of a phrase begun softly, once the voice rises", async () => {
+    // Faint noise; a soft start (1.5 s) then a full voice (2 s); a pause.
+    const audio = new Float32Array(Math.round(5.5 * SR));
+    let seed = 5;
+    for (let i = 0; i < audio.length; i++) audio[i] = ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 0.001;
+    const tone = (i: number, a: number) => a * Math.sin((2 * Math.PI * 200 * i) / SR);
+    // About -53 dBFS: speech while it is all there is, below the threshold once the full voice is heard.
+    for (let i = Math.round(0.5 * SR); i < 2 * SR; i++) audio[i] = tone(i, 0.003);
+    for (let i = 2 * SR; i < 4 * SR; i++) audio[i] = tone(i, 0.4);
+    const sent: { start: number; partial: boolean }[] = [];
+    let recorded = 0;
+    const live = new LiveTranscriber(
+      async (segment, partial) => {
+        // Where the segment starts in the recording: it is the end of what was recorded, or a
+        // finished phrase cut where the voice ends.
+        sent.push({ start: partial ? (recorded - segment.length) / SR : -segment.length / SR, partial });
+        return "";
+      },
+      { onPartial: () => {} },
+    );
+    for (recorded = SR / 10; recorded <= audio.length; recorded += SR / 10) {
+      live.update(audio.subarray(0, recorded));
+      await Promise.resolve();
+    }
+    const partials = sent.filter((s) => s.partial);
+    const final = sent.find((s) => !s.partial)!;
+    // The soft start was heard as speech at first, and every provisional transcript keeps it…
+    expect(partials.length).toBeGreaterThan(5);
+    for (const p of partials) expect(p.start).toBeLessThan(0.6);
+    // …and so does the finished phrase: 3.5 s of voice and the padding around it, not just the full voice.
+    expect(-final.start).toBeGreaterThan(3.5);
+  });
+
   it("never sends a partial while a finished segment is waiting for the model", async () => {
     vi.useFakeTimers();
     try {
